@@ -4,12 +4,10 @@ import type { WishlistDocument, WishlistModel } from '../types/wishlist';
 const wishlistSchema = new Schema<WishlistDocument, WishlistModel>(
   {
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
-    products: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
+    products: { type: [{ type: Schema.Types.ObjectId, ref: 'Product' }], default: [] },
   },
   { timestamps: true },
 );
-
-wishlistSchema.index({ user: 1 }, { unique: true });
 
 export const WishlistModel =
   (mongoose.models.Wishlist as WishlistModel) ||

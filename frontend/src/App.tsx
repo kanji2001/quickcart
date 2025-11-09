@@ -1,7 +1,6 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { CartDrawer } from "@/components/CartDrawer";
@@ -14,11 +13,12 @@ import Deals from "./pages/Deals";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
+import { useAuthSession } from "@/hooks/auth/use-auth-session";
 
-const queryClient = new QueryClient();
+const App = () => {
+  useAuthSession();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+  return (
     <TooltipProvider>
       <Toaster />
       <Sonner position="top-right" />
@@ -42,7 +42,7 @@ const App = () => (
         </div>
       </BrowserRouter>
     </TooltipProvider>
-  </QueryClientProvider>
-);
+  );
+};
 
 export default App;

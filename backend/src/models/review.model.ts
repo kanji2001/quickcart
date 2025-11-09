@@ -8,12 +8,15 @@ const reviewSchema = new Schema<ReviewDocument, ReviewModel>(
     order: { type: Schema.Types.ObjectId, ref: 'Order' },
     rating: { type: Number, required: true, min: 1, max: 5 },
     comment: { type: String, required: true, minlength: 10 },
-    images: [
+    images: {
+      type: [
       {
         publicId: { type: String },
         url: { type: String },
       },
     ],
+      default: [],
+    },
     isVerifiedPurchase: { type: Boolean, default: false },
     helpful: { type: Number, default: 0 },
   },

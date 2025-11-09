@@ -16,8 +16,6 @@ const categorySchema = new Schema<CategoryDocument, CategoryModel>(
   { timestamps: true },
 );
 
-categorySchema.index({ name: 1 }, { unique: true });
-categorySchema.index({ slug: 1 }, { unique: true });
 categorySchema.index({ isActive: 1 });
 
 export const CategoryModel =

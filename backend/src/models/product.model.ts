@@ -3,7 +3,7 @@ import type { ProductDocument, ProductModel } from '../types/product';
 
 const productSchema = new Schema<ProductDocument, ProductModel>(
   {
-    name: { type: String, required: true, trim: true, index: true },
+    name: { type: String, required: true, trim: true },
     slug: { type: String, required: true, unique: true, index: true },
     description: { type: String, required: true },
     price: { type: Number, required: true, min: 0 },
@@ -14,17 +14,20 @@ const productSchema = new Schema<ProductDocument, ProductModel>(
     sku: { type: String, required: true, unique: true, trim: true },
     stock: { type: Number, default: 0, min: 0 },
     sold: { type: Number, default: 0 },
-    images: [
+    images: {
+      type: [
       {
         publicId: { type: String, required: true },
         url: { type: String, required: true },
       },
     ],
+      default: [],
+    },
     thumbnail: {
       publicId: { type: String },
       url: { type: String },
     },
-    features: [{ type: String }],
+    features: { type: [String], default: [] },
     specifications: { type: Schema.Types.Mixed, default: {} },
     rating: { type: Number, default: 0, min: 0, max: 5 },
     numReviews: { type: Number, default: 0 },
@@ -32,7 +35,7 @@ const productSchema = new Schema<ProductDocument, ProductModel>(
     isNew: { type: Boolean, default: false },
     isTrending: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
-    tags: [{ type: String, index: true }],
+    tags: { type: [String], default: [], index: true },
     weight: { type: Number },
     dimensions: {
       length: { type: Number },
@@ -40,7 +43,12 @@ const productSchema = new Schema<ProductDocument, ProductModel>(
       height: { type: Number },
     },
   },
-  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } },
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+    suppressReservedKeysWarning: true,
+  },
 );
 
 productSchema.virtual('discountPercent').get(function calculateDiscount() {

@@ -16,6 +16,7 @@ export interface User {
   resetPasswordToken?: string | null;
   resetPasswordExpire?: Date | null;
   refreshToken?: string | null;
+  isBlocked: boolean;
 }
 
 export interface UserDocument extends User, Document {

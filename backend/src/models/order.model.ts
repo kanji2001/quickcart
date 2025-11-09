@@ -126,7 +126,6 @@ orderSchema.methods.addStatusHistory = function addStatusHistory(status: OrderSt
   }
 };
 
-orderSchema.index({ orderNumber: 1 });
 orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ orderStatus: 1 });
 orderSchema.index({ createdAt: -1 });

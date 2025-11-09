@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Flame, Clock, Percent } from 'lucide-react';
 import { ProductCard } from '@/components/ProductCard';
@@ -10,20 +10,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { products } from '@/lib/mock-data';
+import { useProducts } from '@/hooks/products/use-products';
 
 export default function Deals() {
   const [sortBy, setSortBy] = useState('discount-high');
+  const productsQuery = useProducts({ limit: 48, sort: '-price', isActive: true });
 
-  // Filter products with discounts
-  const dealsProducts = products.filter(p => p.discountPrice && p.discountPrice < p.price);
+  const dealsProducts = useMemo(() => {
+    const items = productsQuery.data?.items ?? [];
+    return items.filter((product) => product.discountPrice && product.discountPrice < product.price);
+  }, [productsQuery.data]);
 
-  // Calculate discount percentage
   const getDiscountPercentage = (price: number, discountPrice: number) => {
     return Math.round(((price - discountPrice) / price) * 100);
   };
 
-  // Sort products
   const sortedProducts = [...dealsProducts].sort((a, b) => {
     const discountA = getDiscountPercentage(a.price, a.discountPrice || a.price);
     const discountB = getDiscountPercentage(b.price, b.discountPrice || b.price);
@@ -101,9 +102,9 @@ export default function Deals() {
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-primary" />
                 <span>
-                  Save up to{' '}
+                  Total savings up to{' '}
                   <strong className="text-2xl gradient-primary bg-clip-text text-transparent">
-                    ₹{totalSavings.toFixed(0)}
+                    ${totalSavings.toFixed(2)}
                   </strong>
                 </span>
               </div>
@@ -118,7 +119,7 @@ export default function Deals() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                Showing {sortedProducts.length} deals
+                {productsQuery.isLoading ? 'Loading deals...' : `Showing ${sortedProducts.length} deals`}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -142,7 +143,9 @@ export default function Deals() {
       {/* Deals Grid */}
       <section className="py-12">
         <div className="container mx-auto px-4">
-          {sortedProducts.length > 0 ? (
+          {productsQuery.isLoading ? (
+            <div className="text-center text-muted-foreground py-20">Loading deals...</div>
+          ) : sortedProducts.length > 0 ? (
             <motion.div
               variants={container}
               initial="hidden"
@@ -150,7 +153,7 @@ export default function Deals() {
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
             >
               {sortedProducts.map((product) => (
-                <motion.div key={product.id} variants={item}>
+                <motion.div key={product._id} variants={item}>
                   <ProductCard product={product} />
                 </motion.div>
               ))}

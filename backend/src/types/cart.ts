@@ -15,6 +15,7 @@ export interface Cart {
 
 export interface CartDocument extends Cart, Document {
   calculateTotals(): void;
+  calculateTotal(): void;
 }
 
 export type CartModel = Model<CartDocument>;

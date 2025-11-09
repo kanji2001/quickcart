@@ -5,13 +5,11 @@ loadEnv();
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z
-    .string()
-    .transform((val) => Number(val))
-    .refine((val) => Number.isInteger(val) && val > 0, {
-      message: 'PORT must be a positive integer',
-    })
-    .default('5000'),
+  PORT: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(5000),
   MONGO_URI: z.string().min(1, 'MONGO_URI is required'),
   JWT_ACCESS_SECRET: z.string().min(1, 'JWT_ACCESS_SECRET is required'),
   JWT_REFRESH_SECRET: z.string().min(1, 'JWT_REFRESH_SECRET is required'),
@@ -24,13 +22,11 @@ const envSchema = z.object({
   CLOUDINARY_API_KEY: z.string().min(1, 'CLOUDINARY_API_KEY is required'),
   CLOUDINARY_API_SECRET: z.string().min(1, 'CLOUDINARY_API_SECRET is required'),
   EMAIL_HOST: z.string().min(1, 'EMAIL_HOST is required'),
-  EMAIL_PORT: z
-    .string()
-    .transform((val) => Number(val))
-    .refine((val) => Number.isInteger(val) && val > 0, {
-      message: 'EMAIL_PORT must be a positive integer',
-    })
-    .default('587'),
+  EMAIL_PORT: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(587),
   EMAIL_USER: z.string().min(1, 'EMAIL_USER is required'),
   EMAIL_PASSWORD: z.string().min(1, 'EMAIL_PASSWORD is required'),
   EMAIL_FROM: z.string().email('EMAIL_FROM must be a valid email address'),

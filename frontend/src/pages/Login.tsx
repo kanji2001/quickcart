@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
@@ -8,8 +7,10 @@ import { Loader2, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
+import { useLoginMutation } from '@/hooks/auth/use-login';
+import { useAuthStore, selectIsAuthenticated } from '@/stores/auth-store';
+import { useEffect } from 'react';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -20,8 +21,8 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuthStore();
-  const [isLoading, setIsLoading] = useState(false);
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const loginMutation = useLoginMutation();
 
   const {
     register,
@@ -31,21 +32,26 @@ export default function Login() {
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: LoginFormData) => {
-    setIsLoading(true);
-    try {
-      await login(data.email, data.password);
-      toast.success('Welcome back!', {
-        description: 'You have successfully logged in.',
-      });
+  useEffect(() => {
+    if (isAuthenticated) {
       navigate('/');
-    } catch (error) {
-      toast.error('Login failed', {
-        description: 'Please check your credentials and try again.',
-      });
-    } finally {
-      setIsLoading(false);
     }
+  }, [isAuthenticated, navigate]);
+
+  const onSubmit = async (data: LoginFormData) => {
+    loginMutation.mutate(data, {
+      onSuccess: () => {
+        toast.success('Welcome back!', {
+          description: 'You have successfully logged in.',
+        });
+        navigate('/');
+      },
+      onError: () => {
+        toast.error('Login failed', {
+          description: 'Please check your credentials and try again.',
+        });
+      },
+    });
   };
 
   return (
@@ -117,9 +123,9 @@ export default function Login() {
               type="submit"
               className="w-full gradient-primary"
               size="lg"
-              disabled={isLoading}
+              disabled={loginMutation.isPending}
             >
-              {isLoading ? (
+              {loginMutation.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Signing in...

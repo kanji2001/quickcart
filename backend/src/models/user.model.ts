@@ -24,20 +24,28 @@ const addressSchema = new Schema<Address>(
 const userSchema = new Schema<UserDocument, UserModel>(
   {
     name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Invalid email address'],
+    },
     password: { type: String, required: true, minlength: 8 },
-    phone: { type: String, required: true, trim: true },
+    phone: { type: String, required: true, trim: true, match: [/^\d{10}$/, 'Phone must be 10 digits'] },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     avatar: {
       publicId: { type: String },
       url: { type: String },
     },
-    addresses: [addressSchema],
+    addresses: { type: [addressSchema], default: [] },
     isVerified: { type: Boolean, default: false },
     verificationToken: { type: String },
     resetPasswordToken: { type: String },
     resetPasswordExpire: { type: Date },
     refreshToken: { type: String },
+    isBlocked: { type: Boolean, default: false },
   },
   {
     timestamps: true,
@@ -55,9 +63,6 @@ const userSchema = new Schema<UserDocument, UserModel>(
     },
   },
 );
-
-userSchema.index({ email: 1 }, { unique: true });
-userSchema.index({ phone: 1 });
 
 userSchema.pre<UserDocument>('save', async function hashPassword(next) {
   if (!this.isModified('password')) {

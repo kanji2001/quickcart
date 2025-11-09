@@ -13,7 +13,7 @@ const cartItemSchema = new Schema(
 const cartSchema = new Schema<CartDocument, CartModel>(
   {
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true },
-    items: [cartItemSchema],
+    items: { type: [cartItemSchema], default: [] },
     totalAmount: { type: Number, default: 0 },
     totalItems: { type: Number, default: 0 },
   },
@@ -38,6 +38,10 @@ cartSchema.pre<CartDocument>('save', function preSave(next) {
   this.calculateTotals();
   next();
 });
+
+cartSchema.methods.calculateTotal = function calculateTotal() {
+  this.calculateTotals();
+};
 
 export const CartModel = (mongoose.models.Cart as CartModel) || mongoose.model<CartDocument, CartModel>('Cart', cartSchema);
 

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
@@ -9,30 +8,39 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
+import { useRegisterMutation } from '@/hooks/auth/use-register';
+import { useAuthStore, selectIsAuthenticated } from '@/stores/auth-store';
+import { useEffect } from 'react';
 
-const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number'),
-  confirmPassword: z.string(),
-  acceptTerms: z.boolean().refine(val => val === true, 'You must accept the terms'),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
-});
+const registerSchema = z
+  .object({
+    name: z.string().min(2, 'Name must be at least 2 characters'),
+    email: z.string().email('Please enter a valid email address'),
+    phone: z
+      .string()
+      .regex(/^\d{10}$/, 'Phone number must be 10 digits')
+      .transform((value) => value.trim()),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+      .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+      .regex(/[0-9]/, 'Password must contain at least one number'),
+    confirmPassword: z.string(),
+    acceptTerms: z.boolean().refine((val) => val === true, 'You must accept the terms'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function Register() {
   const navigate = useNavigate();
-  const { register: registerUser } = useAuthStore();
-  const [isLoading, setIsLoading] = useState(false);
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const registerMutation = useRegisterMutation();
 
   const {
     register,
@@ -43,23 +51,36 @@ export default function Register() {
     resolver: zodResolver(registerSchema),
   });
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
+
   const password = watch('password', '');
 
   const onSubmit = async (data: RegisterFormData) => {
-    setIsLoading(true);
-    try {
-      await registerUser(data.name, data.email, data.password);
-      toast.success('Account created!', {
-        description: 'Welcome to QuickCart. Start shopping now!',
-      });
-      navigate('/');
-    } catch (error) {
-      toast.error('Registration failed', {
-        description: 'Please try again.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    registerMutation.mutate(
+      {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        phone: data.phone,
+      },
+      {
+        onSuccess: () => {
+          toast.success('Account created!', {
+            description: 'Welcome to QuickCart. Start shopping now!',
+          });
+          navigate('/');
+        },
+        onError: () => {
+          toast.error('Registration failed', {
+            description: 'Please try again.',
+          });
+        },
+      },
+    );
   };
 
   return (
@@ -116,6 +137,18 @@ export default function Register() {
               {errors.email && (
                 <p className="text-sm text-destructive">{errors.email.message}</p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="9876543210"
+                {...register('phone')}
+                className={errors.phone ? 'border-destructive' : ''}
+              />
+              {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
             </div>
 
             <div className="space-y-2">
@@ -186,9 +219,9 @@ export default function Register() {
               type="submit"
               className="w-full gradient-primary"
               size="lg"
-              disabled={isLoading}
+              disabled={registerMutation.isPending}
             >
-              {isLoading ? (
+              {registerMutation.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Creating account...
