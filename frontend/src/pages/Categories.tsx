@@ -1,0 +1,133 @@
+import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { categories, products } from '@/lib/mock-data';
+
+export default function Categories() {
+  const getCategoryProductCount = (categoryName: string) => {
+    return products.filter(p => p.category === categoryName).length;
+  };
+
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      {/* Hero Section */}
+      <section className="relative py-20 overflow-hidden">
+        <div className="absolute inset-0 gradient-primary opacity-5"></div>
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center max-w-3xl mx-auto"
+          >
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+              Explore Our{' '}
+              <span className="gradient-primary bg-clip-text text-transparent">
+                Categories
+              </span>
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              Discover thousands of products across all your favorite categories
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Categories Grid */}
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <motion.div
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+          >
+            {categories.map((category) => {
+              const productCount = getCategoryProductCount(category.name);
+              return (
+                <motion.div key={category.id} variants={item}>
+                  <Link to={`/products?category=${category.slug}`}>
+                    <Card className="group overflow-hidden hover:shadow-glow transition-all duration-300 h-full">
+                      <CardContent className="p-0">
+                        <div className="relative aspect-[4/3] overflow-hidden">
+                          <img
+                            src={category.image}
+                            alt={category.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                          <div className="absolute bottom-4 left-4 right-4">
+                            <h3 className="text-xl font-bold text-white mb-1">
+                              {category.name}
+                            </h3>
+                            <Badge variant="secondary" className="bg-white/20 text-white backdrop-blur-sm">
+                              {productCount} Products
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="p-6">
+                          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                            {category.description}
+                          </p>
+                          <div className="flex items-center text-primary font-medium group-hover:gap-2 transition-all">
+                            Shop Now
+                            <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Featured Banner */}
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="relative rounded-2xl overflow-hidden glass-effect p-8 md:p-12"
+          >
+            <div className="absolute inset-0 gradient-primary opacity-10"></div>
+            <div className="relative z-10 text-center max-w-2xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                Can't Find What You're Looking For?
+              </h2>
+              <p className="text-muted-foreground mb-6">
+                Use our advanced search to find exactly what you need
+              </p>
+              <Link
+                to="/products"
+                className="inline-flex items-center gap-2 px-6 py-3 gradient-primary text-white rounded-lg font-medium hover:shadow-glow transition-all"
+              >
+                Browse All Products
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+    </div>
+  );
+}
