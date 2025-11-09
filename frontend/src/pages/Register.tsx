@@ -19,14 +19,15 @@ const registerSchema = z
     email: z.string().email('Please enter a valid email address'),
     phone: z
       .string()
-      .regex(/^\d{10}$/, 'Phone number must be 10 digits')
+      .regex(/^[0-9]{10}$/i, 'Phone number must be 10 digits')
       .transform((value) => value.trim()),
     password: z
       .string()
       .min(8, 'Password must be at least 8 characters')
       .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
       .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-      .regex(/[0-9]/, 'Password must contain at least one number'),
+      .regex(/[0-9]/, 'Password must contain at least one number')
+      .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
     confirmPassword: z.string(),
     acceptTerms: z.boolean().refine((val) => val === true, 'You must accept the terms'),
   })
@@ -74,10 +75,10 @@ export default function Register() {
           });
           navigate('/');
         },
-        onError: () => {
-          toast.error('Registration failed', {
-            description: 'Please try again.',
-          });
+        onError: (error) => {
+          const description =
+            (error as any)?.response?.data?.message ?? 'Please double-check your details and try again.';
+          toast.error('Registration failed', { description });
         },
       },
     );
@@ -120,9 +121,7 @@ export default function Register() {
                 {...register('name')}
                 className={errors.name ? 'border-destructive' : ''}
               />
-              {errors.name && (
-                <p className="text-sm text-destructive">{errors.name.message}</p>
-              )}
+              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
             </div>
 
             <div className="space-y-2">
@@ -134,9 +133,7 @@ export default function Register() {
                 {...register('email')}
                 className={errors.email ? 'border-destructive' : ''}
               />
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
-              )}
+              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
             </div>
 
             <div className="space-y-2">
@@ -157,13 +154,12 @@ export default function Register() {
                 id="password"
                 type="password"
                 placeholder="••••••••"
+                autoComplete="new-password"
                 {...register('password')}
                 className={errors.password ? 'border-destructive' : ''}
               />
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
-              )}
-              
+              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+
               {/* Password Strength Indicator */}
               {password && (
                 <div className="space-y-1">
@@ -172,10 +168,9 @@ export default function Register() {
                     <div className={`h-1 flex-1 rounded ${/[A-Z]/.test(password) ? 'bg-success' : 'bg-muted'}`} />
                     <div className={`h-1 flex-1 rounded ${/[a-z]/.test(password) ? 'bg-success' : 'bg-muted'}`} />
                     <div className={`h-1 flex-1 rounded ${/[0-9]/.test(password) ? 'bg-success' : 'bg-muted'}`} />
+                    <div className={`h-1 flex-1 rounded ${/[^A-Za-z0-9]/.test(password) ? 'bg-success' : 'bg-muted'}`} />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Password strength indicator
-                  </p>
+                  <p className="text-xs text-muted-foreground">Use upper/lowercase, numbers, and symbols for a strong password.</p>
                 </div>
               )}
             </div>
@@ -186,12 +181,11 @@ export default function Register() {
                 id="confirmPassword"
                 type="password"
                 placeholder="••••••••"
+                autoComplete="new-password"
                 {...register('confirmPassword')}
                 className={errors.confirmPassword ? 'border-destructive' : ''}
               />
-              {errors.confirmPassword && (
-                <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
-              )}
+              {errors.confirmPassword && <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>}
             </div>
 
             <div className="flex items-start space-x-2">
@@ -211,16 +205,9 @@ export default function Register() {
                 </Link>
               </Label>
             </div>
-            {errors.acceptTerms && (
-              <p className="text-sm text-destructive">{errors.acceptTerms.message}</p>
-            )}
+            {errors.acceptTerms && <p className="text-sm text-destructive">{errors.acceptTerms.message}</p>}
 
-            <Button
-              type="submit"
-              className="w-full gradient-primary"
-              size="lg"
-              disabled={registerMutation.isPending}
-            >
+            <Button type="submit" className="w-full gradient-primary" size="lg" disabled={registerMutation.isPending}>
               {registerMutation.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

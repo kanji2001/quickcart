@@ -2,16 +2,21 @@ import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronRight, Heart, Minus, Plus, ShoppingCart, Shield, Star, Truck } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProductCard } from '@/components/ProductCard';
+import { ProductCardSkeleton } from '@/components/ProductCardSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { ErrorState } from '@/components/shared/ErrorState';
+import { LoadingState } from '@/components/shared/LoadingState';
 import { useProductDetail } from '@/hooks/products/use-product-detail';
 import { useCartStore } from '@/stores/cart-store';
+import { useAuthStore, selectIsAuthenticated } from '@/stores/auth-store';
 import { useAddCartItemMutation } from '@/hooks/cart/use-cart';
 import { toast } from 'sonner';
-import { useQuery } from '@tanstack/react-query';
 import { productsApi } from '@/api/products';
 
 const formatCurrency = (value?: number) => {
@@ -21,8 +26,8 @@ const formatCurrency = (value?: number) => {
 
 const ProductNotFound = () => (
   <div className="min-h-screen flex items-center justify-center">
-    <div className="text-center">
-      <h2 className="text-2xl font-bold mb-2">Product not found</h2>
+    <div className="text-center space-y-4">
+      <h2 className="text-2xl font-bold">Product not found</h2>
       <Button asChild>
         <Link to="/products">Back to Products</Link>
       </Button>
@@ -35,6 +40,7 @@ export default function ProductDetail() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const { toggleCart } = useCartStore();
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
   const addToCartMutation = useAddCartItemMutation();
 
   const productQuery = useProductDetail(id ?? '');
@@ -62,11 +68,17 @@ export default function ProductDetail() {
     if (product.thumbnail?.url) {
       return [product.thumbnail.url, ...images.filter((img) => img !== product.thumbnail?.url)];
     }
-    return images.length > 0 ? images : ['/placeholder.svg'];
+    return images.length > 0 ? images : ['https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80'];
   }, [product]);
 
   const handleAddToCart = () => {
     if (!product) return;
+
+    if (!isAuthenticated) {
+      toast.info('Please sign in to add items to your cart');
+      return;
+    }
+
     const productId = product._id ?? product.slug;
     addToCartMutation.mutate(
       { productId, quantity },
@@ -90,10 +102,17 @@ export default function ProductDetail() {
   };
 
   if (productQuery.isLoading) {
+    return <LoadingState message="Loading product..." />;
+  }
+
+  if (productQuery.isError) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Loading product...</p>
-      </div>
+      <ErrorState
+        description="We couldn't load product details."
+        onRetry={() => {
+          void productQuery.refetch();
+        }}
+      />
     );
   }
 
@@ -131,6 +150,7 @@ export default function ProductDetail() {
                 {productImages.map((image, index) => (
                   <button
                     key={image}
+                    type="button"
                     onClick={() => setSelectedImage(index)}
                     className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
                       selectedImage === index ? 'border-primary' : 'border-transparent'
@@ -265,7 +285,7 @@ export default function ProductDetail() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Specifications will be available soon.</p>
+                <EmptyState title="Specifications coming soon" description="We're working on adding more details for this item." />
               )}
             </TabsContent>
             <TabsContent value="features" className="mt-6">
@@ -279,22 +299,30 @@ export default function ProductDetail() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">Features will be available soon.</p>
+                <EmptyState title="Features coming soon" description="We're curating highlights for this product." />
               )}
             </TabsContent>
           </Tabs>
         </motion.div>
 
-        {relatedProducts.length > 0 && (
-          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <h2 className="text-2xl font-bold mb-6">Related Products</h2>
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <h2 className="text-2xl font-bold mb-6">Related Products</h2>
+          {relatedQuery.isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <ProductCardSkeleton key={index} />
+              ))}
+            </div>
+          ) : relatedProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {relatedProducts.map((relatedProduct, index) => (
                 <ProductCard key={relatedProduct._id} product={relatedProduct} index={index} />
               ))}
             </div>
-          </motion.section>
-        )}
+          ) : (
+            <EmptyState title="No related products" description="Explore other categories to find similar items." />
+          )}
+        </motion.section>
       </div>
     </div>
   );

@@ -32,6 +32,10 @@ const envSchema = z.object({
   EMAIL_FROM: z.string().email('EMAIL_FROM must be a valid email address'),
   CLIENT_URL: z.string().url('CLIENT_URL must be a valid URL'),
   COOKIE_SECRET: z.string().min(1, 'COOKIE_SECRET is required'),
+  ADMIN_NAME: z.string().min(1).optional(),
+  ADMIN_EMAIL: z.string().email().optional(),
+  ADMIN_PASSWORD: z.string().min(8).optional(),
+  ADMIN_PHONE: z.string().regex(/^\d{10}$/, 'ADMIN_PHONE must be 10 digits').optional(),
 });
 
 type Env = z.infer<typeof envSchema>;
@@ -76,6 +80,12 @@ export const envConfig = {
   },
   clientUrl: env.CLIENT_URL,
   cookieSecret: env.COOKIE_SECRET,
+  admin: {
+    name: env.ADMIN_NAME,
+    email: env.ADMIN_EMAIL,
+    password: env.ADMIN_PASSWORD,
+    phone: env.ADMIN_PHONE,
+  },
 };
 
 export const isProduction = env.NODE_ENV === 'production';

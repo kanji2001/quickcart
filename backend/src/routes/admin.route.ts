@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  getAdminProducts,
   getAnalytics,
   getDashboardStats,
   getUsers,
@@ -16,6 +17,7 @@ router.use(protect, isAdmin);
 
 router.get('/dashboard', getDashboardStats);
 router.get('/users', getUsers);
+router.get('/products', getAdminProducts);
 router.put('/users/:id/role', validateResource(updateUserRoleSchema), updateUserRole);
 router.put('/users/:id/block', validateResource(toggleUserBlockSchema), toggleUserBlock);
 router.get('/analytics', getAnalytics);

@@ -181,8 +181,10 @@ export const getProductReviews = asyncHandler(async (req: Request, res: Response
 });
 
 export const getRelatedProducts = asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const current = await ProductModel.findById(id);
+  const { idOrSlug } = req.params as { idOrSlug: string };
+  const current = await ProductModel.findOne(
+    mongoose.isValidObjectId(idOrSlug) ? { _id: idOrSlug } : { slug: idOrSlug },
+  );
 
   if (!current) {
     throw new ApiError({ message: 'Product not found', statusCode: StatusCodes.NOT_FOUND });

@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Zap, Shield, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/ProductCard';
+import { ProductCardSkeleton } from '@/components/ProductCardSkeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { ErrorState } from '@/components/shared/ErrorState';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useFeaturedProducts } from '@/hooks/products/use-featured-products';
 import { useCategories } from '@/hooks/categories/use-categories';
 
@@ -24,12 +28,68 @@ const FEATURE_HIGHLIGHTS = [
   },
 ] as const;
 
+const CategorySkeletonGrid = () => (
+  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    {Array.from({ length: 6 }).map((_, index) => (
+      <Skeleton key={index} className="aspect-square w-full rounded-xl" />
+    ))}
+  </div>
+);
+
 export default function Home() {
   const featuredProductsQuery = useFeaturedProducts();
   const categoriesQuery = useCategories();
 
   const featuredProducts = featuredProductsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
+
+  const renderFeaturedProducts = () => {
+    if (featuredProductsQuery.isLoading) {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <ProductCardSkeleton key={index} />
+          ))}
+        </div>
+      );
+    }
+
+    if (featuredProductsQuery.isError) {
+      return (
+        <ErrorState
+          description="We couldn't load featured products right now."
+          onRetry={() => {
+            void featuredProductsQuery.refetch();
+          }}
+        />
+      );
+    }
+
+    if (featuredProducts.length === 0) {
+      return (
+        <EmptyState
+          title="No featured products yet"
+          description="Check back soon for curated recommendations."
+          action={
+            <Button asChild size="lg" variant="outline">
+              <Link to="/products">
+                Browse Products
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </Link>
+            </Button>
+          }
+        />
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {featuredProducts.map((product, index) => (
+          <ProductCard key={product._id} product={product} index={index} />
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen">
@@ -96,10 +156,18 @@ export default function Home() {
             <p className="text-muted-foreground">Explore our wide range of categories</p>
           </motion.div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {categoriesQuery.isLoading && <p className="text-sm text-muted-foreground col-span-full text-center">Loading categories...</p>}
-            {!categoriesQuery.isLoading &&
-              categories.map((category, index) => (
+          {categoriesQuery.isLoading ? (
+            <CategorySkeletonGrid />
+          ) : categoriesQuery.isError ? (
+            <ErrorState
+              description="We couldn't load categories."
+              onRetry={() => {
+                void categoriesQuery.refetch();
+              }}
+            />
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {categories.map((category, index) => (
                 <motion.div
                   key={category._id}
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -111,7 +179,7 @@ export default function Home() {
                   <Link to={`/products?category=${category.slug}`}>
                     <div className="group relative aspect-square rounded-xl overflow-hidden shadow-card hover:shadow-lg transition-all">
                       <img
-                        src={category.image?.url ?? '/placeholder.svg'}
+                        src={category.image?.url ?? 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80'}
                         alt={category.name}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
@@ -123,7 +191,8 @@ export default function Home() {
                   </Link>
                 </motion.div>
               ))}
-          </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -140,30 +209,7 @@ export default function Home() {
             <p className="text-muted-foreground">Handpicked favorites just for you</p>
           </motion.div>
 
-          {featuredProductsQuery.isLoading ? (
-            <p className="text-sm text-muted-foreground text-center">Loading featured products...</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {featuredProducts.map((product, index) => (
-                <ProductCard key={product._id} product={product} index={index} />
-              ))}
-            </div>
-          )}
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="text-center mt-12"
-          >
-            <Button asChild size="lg" variant="outline">
-              <Link to="/products">
-                View All Products
-                <ArrowRight className="ml-2 w-4 h-4" />
-              </Link>
-            </Button>
-          </motion.div>
+          {renderFeaturedProducts()}
         </div>
       </section>
 

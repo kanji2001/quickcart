@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { SlidersHorizontal, X } from 'lucide-react';
 import { ProductCard } from '@/components/ProductCard';
+import { ProductCardSkeleton } from '@/components/ProductCardSkeleton';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -15,6 +16,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { ErrorState } from '@/components/shared/ErrorState';
 import { useProducts } from '@/hooks/products/use-products';
 import { useCategories } from '@/hooks/categories/use-categories';
 import type { ProductQueryParams } from '@/api/products';
@@ -79,6 +83,8 @@ type FilterContentProps = {
   onCategoryToggle: (id: string) => void;
   onPriceRangeChange: (value: [number, number]) => void;
   onClear: () => void;
+  isLoading: boolean;
+  isError: boolean;
 };
 
 const FilterContent = ({
@@ -88,24 +94,36 @@ const FilterContent = ({
   onCategoryToggle,
   onPriceRangeChange,
   onClear,
+  isLoading,
+  isError,
 }: FilterContentProps) => (
   <div className="space-y-6">
     <div>
       <h3 className="font-semibold mb-3">Categories</h3>
-      <div className="space-y-2">
-        {categories.map((category) => (
-          <div key={category._id} className="flex items-center space-x-2">
-            <Checkbox
-              id={category._id}
-              checked={selectedCategories.includes(category._id)}
-              onCheckedChange={() => onCategoryToggle(category._id)}
-            />
-            <Label htmlFor={category._id} className="cursor-pointer text-sm">
-              {category.name}
-            </Label>
-          </div>
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <Skeleton key={index} className="h-4 w-full" />
+          ))}
+        </div>
+      ) : isError ? (
+        <p className="text-sm text-destructive">Unable to load categories.</p>
+      ) : (
+        <div className="space-y-2">
+          {categories.map((category) => (
+            <div key={category._id} className="flex items-center space-x-2">
+              <Checkbox
+                id={category._id}
+                checked={selectedCategories.includes(category._id)}
+                onCheckedChange={() => onCategoryToggle(category._id)}
+              />
+              <Label htmlFor={category._id} className="cursor-pointer text-sm">
+                {category.name}
+              </Label>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
 
     <div>
@@ -152,6 +170,51 @@ export default function Products() {
   const products = productsQuery.data?.items ?? [];
   const pagination = productsQuery.data?.pagination;
 
+  const renderProducts = () => {
+    if (productsQuery.isLoading) {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+          {Array.from({ length: 9 }).map((_, index) => (
+            <ProductCardSkeleton key={index} />
+          ))}
+        </div>
+      );
+    }
+
+    if (productsQuery.isError) {
+      return (
+        <ErrorState
+          description="We couldn't load products right now."
+          onRetry={() => {
+            void productsQuery.refetch();
+          }}
+        />
+      );
+    }
+
+    if (products.length === 0) {
+      return (
+        <EmptyState
+          title="No products found"
+          description="Try adjusting your filters or browse all items."
+          action={
+            <Button onClick={resetFilters} variant="outline">
+              Clear Filters
+            </Button>
+          }
+        />
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+        {products.map((product, index) => (
+          <ProductCard key={product._id} product={product} index={index} />
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4">
@@ -180,6 +243,8 @@ export default function Products() {
                 onCategoryToggle={updateCategory}
                 onPriceRangeChange={(value) => updatePriceRange(value as [number, number])}
                 onClear={resetFilters}
+                isLoading={categoriesQuery.isLoading}
+                isError={categoriesQuery.isError}
               />
             </div>
           </motion.aside>
@@ -206,6 +271,8 @@ export default function Products() {
                       onCategoryToggle={updateCategory}
                       onPriceRangeChange={(value) => updatePriceRange(value as [number, number])}
                       onClear={resetFilters}
+                      isLoading={categoriesQuery.isLoading}
+                      isError={categoriesQuery.isError}
                     />
                   </div>
                 </SheetContent>
@@ -225,23 +292,7 @@ export default function Products() {
               </Select>
             </div>
 
-            {productsQuery.isLoading ? (
-              <div className="py-16 text-center text-muted-foreground">Loading products...</div>
-            ) : products.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {products.map((product, index) => (
-                  <ProductCard key={product._id} product={product} index={index} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-20">
-                <h3 className="text-xl font-semibold mb-2">No products found</h3>
-                <p className="text-muted-foreground mb-6">Try adjusting your filters</p>
-                <Button onClick={resetFilters} variant="outline">
-                  Clear Filters
-                </Button>
-              </div>
-            )}
+            {renderProducts()}
           </div>
         </div>
       </div>

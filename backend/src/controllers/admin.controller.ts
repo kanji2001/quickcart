@@ -7,24 +7,43 @@ import { ApiError } from '../utils/api-error';
 import { getPagination } from '../utils/pagination';
 
 export const getDashboardStats = asyncHandler(async (_req: Request, res: Response) => {
-  const [totalUsers, totalProducts, totalOrders, deliveredOrders, revenueAgg, recentOrders, lowStockProducts] =
-    await Promise.all([
-      UserModel.countDocuments(),
-      ProductModel.countDocuments({ isActive: true }),
-      OrderModel.countDocuments(),
-      OrderModel.countDocuments({ orderStatus: 'delivered' }),
-      OrderModel.aggregate([
-        { $match: { paymentStatus: 'completed' } },
-        {
-          $group: {
-            _id: null,
-            revenue: { $sum: '$totalAmount' },
-          },
+  const [
+    totalUsers,
+    totalProducts,
+    totalOrders,
+    deliveredOrders,
+    revenueAgg,
+    recentOrders,
+    lowStockProducts,
+    topProducts,
+  ] = await Promise.all([
+    UserModel.countDocuments(),
+    ProductModel.countDocuments({ isActive: true }),
+    OrderModel.countDocuments(),
+    OrderModel.countDocuments({ orderStatus: 'delivered' }),
+    OrderModel.aggregate([
+      { $match: { paymentStatus: 'completed' } },
+      {
+        $group: {
+          _id: null,
+          revenue: { $sum: '$totalAmount' },
         },
-      ]),
-      OrderModel.find().sort({ createdAt: -1 }).limit(5).populate('user', 'name email'),
-      ProductModel.find({ stock: { $lt: 5 }, isActive: true }).sort({ stock: 1 }).limit(5),
-    ]);
+      },
+    ]),
+    OrderModel.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate('user', 'name email')
+      .select('orderNumber totalAmount paymentStatus orderStatus createdAt user'),
+    ProductModel.find({ stock: { $lt: 5 }, isActive: true })
+      .sort({ stock: 1 })
+      .limit(5)
+      .select('name slug stock sold price thumbnail sku'),
+    ProductModel.find({ isActive: true })
+      .sort({ sold: -1 })
+      .limit(5)
+      .select('name slug sold stock price thumbnail sku'),
+  ]);
 
   return successResponse(res, {
     message: 'Dashboard statistics',
@@ -38,6 +57,7 @@ export const getDashboardStats = asyncHandler(async (_req: Request, res: Respons
       },
       recentOrders,
       lowStockProducts,
+      topProducts,
     },
   });
 });
@@ -129,6 +149,28 @@ export const getAnalytics = asyncHandler(async (_req: Request, res: Response) =>
     },
     { $sort: { totalSold: -1 } },
     { $limit: 10 },
+    {
+      $lookup: {
+        from: 'products',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'product',
+      },
+    },
+    { $unwind: '$product' },
+    {
+      $project: {
+        _id: 0,
+        productId: '$product._id',
+        name: '$product.name',
+        slug: '$product.slug',
+        sku: '$product.sku',
+        totalSold: 1,
+        revenue: 1,
+        price: '$product.price',
+        thumbnail: '$product.thumbnail',
+      },
+    },
   ]);
 
   return successResponse(res, {
@@ -136,6 +178,55 @@ export const getAnalytics = asyncHandler(async (_req: Request, res: Response) =>
     data: {
       salesByMonth,
       productPerformance,
+    },
+  });
+});
+
+export const getAdminProducts = asyncHandler(async (req: Request, res: Response) => {
+  const { page, limit, skip } = getPagination({ page: String(req.query.page ?? '1'), limit: String(req.query.limit ?? '20') });
+  const search = String(req.query.search ?? '').trim();
+  const status = String(req.query.status ?? '').trim();
+  const tag = String(req.query.tag ?? '').trim();
+
+  const filters: Record<string, unknown> = {};
+
+  if (search) {
+    filters.$or = [
+      { name: { $regex: search, $options: 'i' } },
+      { sku: { $regex: search, $options: 'i' } },
+    ];
+  }
+
+  if (status === 'inactive') {
+    filters.isActive = false;
+  }
+  if (status === 'active') {
+    filters.isActive = true;
+  }
+
+  if (status === 'featured') {
+    filters.isFeatured = true;
+  }
+
+  if (tag) {
+    filters.tags = { $in: [tag] };
+  }
+
+  const [products, total] = await Promise.all([
+    ProductModel.find(filters)
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 })
+      .select('name slug sku price discountPrice stock sold isFeatured isTrending isActive category thumbnail createdAt updatedAt')
+      .populate('category', 'name slug'),
+    ProductModel.countDocuments(filters),
+  ]);
+
+  return successResponse(res, {
+    message: 'Products fetched successfully',
+    data: {
+      items: products,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) || 1 },
     },
   });
 });

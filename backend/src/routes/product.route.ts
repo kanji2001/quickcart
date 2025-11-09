@@ -30,7 +30,7 @@ router.get('/trending', getTrendingProducts);
 router.get('/new-arrivals', getNewArrivals);
 router.get('/:idOrSlug', validateResource(productSlugParamSchema), getProduct);
 router.get('/:id/reviews', validateResource(productIdParamSchema), getProductReviews);
-router.get('/:id/related', validateResource(productIdParamSchema), getRelatedProducts);
+router.get('/:idOrSlug/related', validateResource(productSlugParamSchema), getRelatedProducts);
 
 router.post('/', protect, isAdmin, validateResource(createProductSchema), createProduct);
 router.put('/:id', protect, isAdmin, validateResource(updateProductSchema), updateProduct);

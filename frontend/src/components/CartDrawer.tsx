@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { LoadingState } from '@/components/shared/LoadingState';
 import { useCartStore } from '@/stores/cart-store';
 import { useCartQuery, useUpdateCartItemMutation, useRemoveCartItemMutation } from '@/hooks/cart/use-cart';
 
@@ -193,7 +194,7 @@ export function CartDrawer() {
 
             {isLoading ? (
               <div className="flex-1 flex items-center justify-center">
-                <p className="text-sm text-muted-foreground">Loading cart...</p>
+                <LoadingState message="Loading your cart..." />
               </div>
             ) : isError ? (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-4">

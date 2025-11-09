@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Search, User, Moon, Sun, Menu, X, Heart, Package } from 'lucide-react';
+import { ShoppingCart, Search, User, Moon, Sun, Menu, X, Heart, Package, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +57,14 @@ const AuthenticatedMenu = ({ onLogout }: UserMenuProps) => {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {user?.role === 'admin' ? (
+          <DropdownMenuItem asChild>
+            <Link to="/admin" className="cursor-pointer">
+              <Shield className="w-4 h-4 mr-2" />
+              Admin
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem asChild>
           <Link to="/profile" className="cursor-pointer">
             <User className="w-4 h-4 mr-2" />
@@ -90,40 +98,48 @@ type MobileMenuProps = {
   isAuthenticated: boolean;
 };
 
-const MobileMenu = ({ isOpen, onClose, isAuthenticated }: MobileMenuProps) => (
-  <AnimatePresence>
-    {isOpen && (
-      <motion.div
-        initial={{ opacity: 0, height: 0 }}
-        animate={{ opacity: 1, height: 'auto' }}
-        exit={{ opacity: 0, height: 0 }}
-        className="md:hidden border-t"
-      >
-        <div className="container mx-auto px-4 py-4 space-y-2">
-          <Link to="/" className="block py-2 text-sm font-medium" onClick={onClose}>
-            Home
-          </Link>
-          <Link to="/products" className="block py-2 text-sm font-medium" onClick={onClose}>
-            Products
-          </Link>
-          <Link to="/categories" className="block py-2 text-sm font-medium" onClick={onClose}>
-            Categories
-          </Link>
-          <Link to="/deals" className="block py-2 text-sm font-medium" onClick={onClose}>
-            Deals
-          </Link>
-          {!isAuthenticated && (
-            <Button asChild size="sm" className="w-full gradient-primary mt-4">
-              <Link to="/login" onClick={onClose}>
-                Sign In
+const MobileMenu = ({ isOpen, onClose, isAuthenticated }: MobileMenuProps) => {
+  const user = useAuthStore(selectAuthUser);
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          className="md:hidden border-t"
+        >
+          <div className="container mx-auto px-4 py-4 space-y-2">
+            <Link to="/" className="block py-2 text-sm font-medium" onClick={onClose}>
+              Home
+            </Link>
+            <Link to="/products" className="block py-2 text-sm font-medium" onClick={onClose}>
+              Products
+            </Link>
+            <Link to="/categories" className="block py-2 text-sm font-medium" onClick={onClose}>
+              Categories
+            </Link>
+            <Link to="/deals" className="block py-2 text-sm font-medium" onClick={onClose}>
+              Deals
+            </Link>
+            {user?.role === 'admin' ? (
+              <Link to="/admin" className="block py-2 text-sm font-medium" onClick={onClose}>
+                Admin Dashboard
               </Link>
-            </Button>
-          )}
-        </div>
-      </motion.div>
-    )}
-  </AnimatePresence>
-);
+            ) : null}
+            {!isAuthenticated && (
+              <Button asChild size="sm" className="w-full gradient-primary mt-4">
+                <Link to="/login" onClick={onClose}>
+                  Sign In
+                </Link>
+              </Button>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -133,6 +149,7 @@ export function Navbar() {
   const { data: cart } = useCartQuery();
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
   const logoutMutation = useLogoutMutation();
+  const user = useAuthStore(selectAuthUser);
 
   const cartItemsCount = cart?.totalItems ?? 0;
 
@@ -189,6 +206,11 @@ export function Navbar() {
                 <Link to="/login">Sign In</Link>
               </Button>
             )}
+            {isAuthenticated && user?.role === 'admin' ? (
+              <Button asChild variant="outline" size="sm" className="hidden md:flex">
+                <Link to="/admin">Admin</Link>
+              </Button>
+            ) : null}
 
             <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen((prev) => !prev)}>
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}

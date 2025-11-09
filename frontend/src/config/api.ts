@@ -58,5 +58,13 @@ export const API_ROUTES = {
     verify: '/payment/verify',
     refund: (orderId: string) => `/payment/refund/${orderId}`,
   },
+  admin: {
+    dashboard: '/admin/dashboard',
+    products: '/admin/products',
+    users: '/admin/users',
+    userRole: (id: string) => `/admin/users/${id}/role`,
+    userBlock: (id: string) => `/admin/users/${id}/block`,
+    analytics: '/admin/analytics',
+  },
 };
 
