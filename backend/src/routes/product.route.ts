@@ -34,7 +34,7 @@ router.get('/:id/reviews', validateResource(productIdParamSchema), getProductRev
 router.get('/:idOrSlug/related', validateResource(productSlugParamSchema), getRelatedProducts);
 
 router.post('/', protect, isAdmin, upload.single('image'), validateResource(createProductSchema), createProduct);
-router.put('/:id', protect, isAdmin, validateResource(updateProductSchema), updateProduct);
+router.put('/:id', protect, isAdmin, upload.single('image'), validateResource(updateProductSchema), updateProduct);
 router.delete('/:id', protect, isAdmin, validateResource(productIdParamSchema), deleteProduct);
 
 router.post('/:id/reviews', protect, validateResource(createReviewSchema), createProductReview);

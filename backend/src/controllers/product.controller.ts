@@ -298,22 +298,139 @@ export const createProduct = asyncHandler(async (req: Request, res: Response) =>
 export const updateProduct = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const product = await ProductModel.findByIdAndUpdate(
-    id,
-    {
-      ...req.body,
-      updatedAt: new Date(),
-    },
-    { new: true, runValidators: true },
-  );
-
+  const product = await ProductModel.findById(id);
   if (!product) {
     throw new ApiError({ message: 'Product not found', statusCode: StatusCodes.NOT_FOUND });
   }
 
+  const {
+    tags: incomingTags,
+    features: incomingFeatures,
+    discountPrice: incomingDiscountPrice,
+    price: incomingPrice,
+    stock: incomingStock,
+    isActive: incomingIsActive,
+    isFeatured: incomingIsFeatured,
+    isNew: incomingIsNew,
+    isTrending: incomingIsTrending,
+    dimensions: incomingDimensions,
+    ...restBody
+  } = req.body as unknown as {
+    tags?: string[] | string;
+    features?: string[] | string;
+    discountPrice?: string | number;
+    price?: string | number;
+    stock?: string | number;
+    isActive?: string | boolean;
+    isFeatured?: string | boolean;
+    isNew?: string | boolean;
+    isTrending?: string | boolean;
+    dimensions?: Record<string, unknown> | string;
+  } & Record<string, unknown>;
+
+  const updatePayload: Record<string, unknown> = { updatedAt: new Date() };
+
+  Object.entries(restBody).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') {
+      updatePayload[key] = value;
+    }
+  });
+
+  if (incomingPrice !== undefined) {
+    const price = Number(incomingPrice);
+    if (Number.isNaN(price)) {
+      throw new ApiError({ message: 'Invalid price', statusCode: StatusCodes.BAD_REQUEST });
+    }
+    updatePayload.price = price;
+  }
+
+  if (incomingDiscountPrice !== undefined) {
+    if (incomingDiscountPrice === '' || incomingDiscountPrice === null) {
+      updatePayload.discountPrice = null;
+    } else {
+      const discountPrice = Number(incomingDiscountPrice);
+      if (Number.isNaN(discountPrice)) {
+        throw new ApiError({ message: 'Invalid discount price', statusCode: StatusCodes.BAD_REQUEST });
+      }
+      updatePayload.discountPrice = discountPrice;
+    }
+  }
+
+  if (incomingStock !== undefined) {
+    const stock = Number(incomingStock);
+    if (Number.isNaN(stock)) {
+      throw new ApiError({ message: 'Invalid stock value', statusCode: StatusCodes.BAD_REQUEST });
+    }
+    updatePayload.stock = stock;
+  }
+
+  if (incomingIsActive !== undefined) {
+    updatePayload.isActive = ['true', '1', 'on', true].includes(incomingIsActive);
+  }
+  if (incomingIsFeatured !== undefined) {
+    updatePayload.isFeatured = ['true', '1', 'on', true].includes(incomingIsFeatured);
+  }
+  if (incomingIsNew !== undefined) {
+    updatePayload.isNew = ['true', '1', 'on', true].includes(incomingIsNew);
+  }
+  if (incomingIsTrending !== undefined) {
+    updatePayload.isTrending = ['true', '1', 'on', true].includes(incomingIsTrending);
+  }
+
+  if (incomingTags !== undefined) {
+    const tags = Array.isArray(incomingTags)
+      ? incomingTags.filter((tag) => typeof tag === 'string' && tag.trim().length)
+      : incomingTags
+      ? [incomingTags].filter((tag) => typeof tag === 'string' && tag.trim().length)
+      : [];
+    updatePayload.tags = tags;
+  }
+
+  if (incomingFeatures !== undefined) {
+    const features = Array.isArray(incomingFeatures)
+      ? incomingFeatures.filter((feature) => typeof feature === 'string' && feature.trim().length)
+      : incomingFeatures
+      ? [incomingFeatures].filter((feature) => typeof feature === 'string' && feature.trim().length)
+      : [];
+    updatePayload.features = features;
+  }
+
+  if (incomingDimensions !== undefined) {
+    if (typeof incomingDimensions === 'string') {
+      try {
+        const parsed = JSON.parse(incomingDimensions);
+        updatePayload.dimensions = parsed;
+      } catch (error) {
+        throw new ApiError({ message: 'Invalid dimensions', statusCode: StatusCodes.BAD_REQUEST });
+      }
+    } else {
+      updatePayload.dimensions = incomingDimensions;
+    }
+  }
+
+  if (req.file) {
+    const uploadResult = await uploadToCloudinary(
+      req.file.buffer,
+      `quickcart/products/${restBody.slug ?? product.slug ?? 'general'}`,
+    );
+
+    const imagePayload = {
+      publicId: uploadResult.public_id,
+      url: uploadResult.secure_url,
+    };
+
+    updatePayload.images = [imagePayload];
+    updatePayload.thumbnail = imagePayload;
+  }
+
+  const updatedProduct = await ProductModel.findByIdAndUpdate(id, updatePayload, {
+    new: true,
+    runValidators: true,
+  });
+
   return successResponse(res, {
     message: 'Product updated successfully',
-    data: { product },
+    data: { product: updatedProduct },
   });
 });
 

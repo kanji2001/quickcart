@@ -10,6 +10,7 @@ import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Categories from "./pages/Categories";
 import Deals from "./pages/Deals";
+import SearchResults from "./pages/SearchResults";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
@@ -40,6 +41,7 @@ const App = () => {
               <Route path="/products/:id" element={<ProductDetail />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="/deals" element={<Deals />} />
+              <Route path="/search" element={<SearchResults />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/orders" element={<Orders />} />

@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, ShoppingCart } from 'lucide-react';
@@ -43,13 +43,11 @@ export default function Register() {
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
   const registerMutation = useRegisterMutation();
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<RegisterFormData>({
+  const { register, control, handleSubmit, watch, formState: { errors } } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
+    defaultValues: {
+      acceptTerms: false,
+    },
   });
 
   useEffect(() => {
@@ -71,9 +69,9 @@ export default function Register() {
       {
         onSuccess: () => {
           toast.success('Account created!', {
-            description: 'Welcome to QuickCart. Start shopping now!',
+            description: 'Your account is ready. Please sign in using your new credentials.',
           });
-          navigate('/');
+          navigate('/login', { replace: true, state: { email: data.email } });
         },
         onError: (error) => {
           const description =
@@ -189,10 +187,17 @@ export default function Register() {
             </div>
 
             <div className="flex items-start space-x-2">
-              <Checkbox
-                id="terms"
-                {...register('acceptTerms')}
-                className={errors.acceptTerms ? 'border-destructive' : ''}
+              <Controller
+                name="acceptTerms"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    id="terms"
+                    checked={field.value}
+                    onCheckedChange={(checked) => field.onChange(Boolean(checked))}
+                    className={errors.acceptTerms ? 'border-destructive' : ''}
+                  />
+                )}
               />
               <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
                 I agree to the{' '}

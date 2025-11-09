@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { FormEvent, useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Search, User, Moon, Sun, Menu, X, Heart, Package, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -144,6 +144,8 @@ const MobileMenu = ({ isOpen, onClose, isAuthenticated }: MobileMenuProps) => {
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
+  const location = useLocation();
   const { theme, toggleTheme } = useThemeStore();
   const { toggleCart } = useCartStore();
   const { data: cart } = useCartQuery();
@@ -155,6 +157,34 @@ export function Navbar() {
 
   const handleLogout = () => {
     logoutMutation.mutate();
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const qParam = params.get('q');
+    if (qParam !== null) {
+      setSearchQuery(qParam);
+      return;
+    }
+
+    if (location.pathname.startsWith('/search')) {
+      setSearchQuery('');
+      return;
+    }
+
+    setSearchQuery('');
+  }, [location.pathname, location.search]);
+
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmed = searchQuery.trim();
+    setMobileOpen(false);
+    if (!trimmed) {
+      navigate('/products');
+      return;
+    }
+
+    navigate(`/search?q=${encodeURIComponent(trimmed)}`);
   };
 
   return (
@@ -170,18 +200,20 @@ export function Navbar() {
 
           <DesktopLinks />
 
-          <div className="hidden lg:flex items-center flex-1 max-w-md mx-8">
+          <form className="hidden lg:flex items-center flex-1 max-w-md mx-8" onSubmit={handleSearchSubmit}>
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search products..."
+                placeholder="Search products, categories..."
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 className="pl-10 bg-muted/50"
+                aria-label="Search products and categories"
               />
             </div>
-          </div>
+            <button type="submit" className="hidden" aria-hidden="true" />
+          </form>
 
           <div className="flex items-center space-x-2">
             <Button variant="ghost" size="icon" onClick={toggleTheme} className="hidden sm:flex">
@@ -219,16 +251,18 @@ export function Navbar() {
         </div>
 
         <div className="lg:hidden pb-4">
-          <div className="relative">
+          <form className="relative" onSubmit={handleSearchSubmit}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search products..."
+              placeholder="Search products, categories..."
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               className="pl-10 bg-muted/50"
+              aria-label="Search products and categories"
             />
-          </div>
+            <button type="submit" className="hidden" aria-hidden="true" />
+          </form>
         </div>
       </div>
 

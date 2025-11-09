@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, Star, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { Search, Star, ToggleLeft, ToggleRight, ChevronLeft, ChevronRight, Trash2, Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { useAdminProducts, useAdminUpdateProduct, useAdminDeleteProduct } from '
 import { formatCurrency } from '@/utils/number';
 import { toast } from 'sonner';
 import { AddProductDialog } from '@/components/admin/AddProductDialog';
+import { EditProductDialog } from '@/components/admin/EditProductDialog';
 
 const ProductsLoading = () => (
   <Card className="shadow-sm">
@@ -209,15 +210,17 @@ export const AdminProducts = () => {
                           </Badge>
                         ) : null}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="font-semibold">{formatCurrency(product.discountPrice ?? product.price)}</div>
-                        {product.discountPrice ? (
-                          <div className="text-xs text-muted-foreground line-through">
-                            {formatCurrency(product.price)}
-                          </div>
-                        ) : null}
-                      </TableCell>
-                      <TableCell className="text-right">
+                    <TableCell className="text-right">
+                      <div className="font-semibold">{formatCurrency(product.discountPrice ?? product.price)}</div>
+                      {product.discountPrice ? (
+                        <div className="text-xs text-muted-foreground line-through">
+                          {formatCurrency(product.price)}
+                        </div>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <EditProductDialog productId={product._id} />
                         <Button
                           variant="outline"
                           size="sm"
@@ -234,26 +237,25 @@ export const AdminProducts = () => {
                             </>
                           )}
                         </Button>
-                        <div className="mt-3 flex flex-wrap justify-end gap-2">
-                          <Button
-                            variant={product.isFeatured ? 'secondary' : 'outline'}
-                            size="sm"
-                            onClick={() => handleToggle(product._id, 'isFeatured', product.isFeatured)}
-                            disabled={updateMutation.isPending}
-                          >
-                            <Star className="mr-1 h-4 w-4" />
-                            {product.isFeatured ? 'Unmark' : 'Feature'}
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDelete(product._id, product.name)}
-                            disabled={deleteMutation.isPending}
-                          >
-                            <Trash2 className="mr-1 h-4 w-4" /> Remove
-                          </Button>
-                        </div>
-                      </TableCell>
+                        <Button
+                          variant={product.isFeatured ? 'secondary' : 'outline'}
+                          size="sm"
+                          onClick={() => handleToggle(product._id, 'isFeatured', product.isFeatured)}
+                          disabled={updateMutation.isPending}
+                        >
+                          <Star className="mr-1 h-4 w-4" />
+                          {product.isFeatured ? 'Unmark' : 'Feature'}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(product._id, product.name)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Trash2 className="mr-1 h-4 w-4" /> Remove
+                        </Button>
+                      </div>
+                    </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -299,6 +301,15 @@ export const AdminProducts = () => {
                   </div>
 
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <EditProductDialog
+                      productId={product._id}
+                      trigger={
+                        <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                          <Pencil className="mr-1 h-4 w-4" />
+                          Edit
+                        </Button>
+                      }
+                    />
                     <Button
                       variant="outline"
                       size="sm"

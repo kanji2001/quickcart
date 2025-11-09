@@ -14,6 +14,19 @@ export const useAdminProducts = (params: AdminProductsQuery = {}) =>
     placeholderData: (previousData) => previousData,
   });
 
+export const useAdminProduct = (id: string | null, enabled = true) =>
+  useQuery({
+    queryKey: ['admin', 'product', id],
+    enabled: Boolean(id) && enabled,
+    queryFn: async () => {
+      if (!id) {
+        return null;
+      }
+      const { data } = await adminApi.product(id);
+      return data.data.product;
+    },
+  });
+
 export const useAdminCreateProduct = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -28,7 +41,8 @@ export const useAdminCreateProduct = () => {
 export const useAdminUpdateProduct = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: Partial<Product> }) => adminApi.updateProduct(id, payload),
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<Product> | FormData }) =>
+      adminApi.updateProduct(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'products'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] });
