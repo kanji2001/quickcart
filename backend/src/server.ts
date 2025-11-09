@@ -4,9 +4,11 @@ import { envConfig, isDevelopment } from './config/env';
 import { logger } from './config/logger';
 import { connectDatabase, disconnectDatabase } from './database/mongoose';
 import { ensureInitialAdmin } from './bootstrap/ensure-admin';
+import { ensureIndexes } from './bootstrap/ensure-indexes';
 
 const startServer = async () => {
   await connectDatabase();
+  await ensureIndexes();
   await ensureInitialAdmin();
 
   const server = http.createServer(app);
