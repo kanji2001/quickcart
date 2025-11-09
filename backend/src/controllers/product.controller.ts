@@ -6,6 +6,7 @@ import { ProductModel, ReviewModel, OrderModel } from '../models';
 import { successResponse } from '../utils/response';
 import { ApiError } from '../utils/api-error';
 import { getPagination } from '../utils/pagination';
+import { uploadToCloudinary } from '../services/cloudinary.service';
 
 const buildProductFilters = (query: Request['query']) => {
   const filters: Record<string, unknown> = {
@@ -205,12 +206,87 @@ export const getRelatedProducts = asyncHandler(async (req: Request, res: Respons
 });
 
 export const createProduct = asyncHandler(async (req: Request, res: Response) => {
-  const product = await ProductModel.create({
-    ...req.body,
-    tags: req.body.tags ?? [],
-    features: req.body.features ?? [],
-    images: req.body.images ?? [],
-  });
+  const {
+    tags: incomingTags,
+    features: incomingFeatures,
+    ...body
+  } = req.body as unknown as {
+    tags?: string[] | string;
+    features?: string[] | string;
+  } & Record<string, any>;
+
+  const tags = Array.isArray(incomingTags)
+    ? incomingTags.filter((tag) => typeof tag === 'string' && tag.trim().length)
+    : incomingTags
+    ? [incomingTags].filter((tag) => typeof tag === 'string' && tag.trim().length)
+    : [];
+
+  const features = Array.isArray(incomingFeatures)
+    ? incomingFeatures.filter((feature) => typeof feature === 'string' && feature.trim().length)
+    : incomingFeatures
+    ? [incomingFeatures].filter((feature) => typeof feature === 'string' && feature.trim().length)
+    : [];
+
+  const productPayload: Record<string, unknown> = {
+    ...body,
+    tags,
+    features,
+  };
+
+  if (body.price !== undefined) {
+    const price = Number(body.price);
+    if (Number.isNaN(price)) {
+      throw new ApiError({ message: 'Invalid price', statusCode: StatusCodes.BAD_REQUEST });
+    }
+    productPayload.price = price;
+  }
+
+  if (body.discountPrice !== undefined && body.discountPrice !== '') {
+    const discountPrice = Number(body.discountPrice);
+    if (Number.isNaN(discountPrice)) {
+      throw new ApiError({ message: 'Invalid discount price', statusCode: StatusCodes.BAD_REQUEST });
+    }
+    productPayload.discountPrice = discountPrice;
+  }
+
+  if (body.stock !== undefined) {
+    const stock = Number(body.stock);
+    if (Number.isNaN(stock)) {
+      throw new ApiError({ message: 'Invalid stock value', statusCode: StatusCodes.BAD_REQUEST });
+    }
+    productPayload.stock = stock;
+  }
+
+  if (body.isActive !== undefined) {
+    productPayload.isActive = ['true', '1', true].includes(body.isActive);
+  }
+
+  if (body.isFeatured !== undefined) {
+    productPayload.isFeatured = ['true', '1', true].includes(body.isFeatured);
+  }
+  if (body.isNew !== undefined) {
+    productPayload.isNew = ['true', '1', true].includes(body.isNew);
+  }
+  if (body.isTrending !== undefined) {
+    productPayload.isTrending = ['true', '1', true].includes(body.isTrending);
+  }
+
+  if (req.file) {
+    const uploadResult = await uploadToCloudinary(
+      req.file.buffer,
+      `quickcart/products/${body.slug ?? 'general'}`,
+    );
+
+    const imagePayload = {
+      publicId: uploadResult.public_id,
+      url: uploadResult.secure_url,
+    };
+
+    productPayload.images = [imagePayload];
+    productPayload.thumbnail = imagePayload;
+  }
+
+  const product = await ProductModel.create(productPayload);
 
   return successResponse(res, {
     message: 'Product created successfully',
@@ -244,19 +320,17 @@ export const updateProduct = asyncHandler(async (req: Request, res: Response) =>
 export const deleteProduct = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const product = await ProductModel.findByIdAndUpdate(
-    id,
-    { isActive: false, updatedAt: new Date() },
-    { new: true },
-  );
+  const product = await ProductModel.findById(id);
 
   if (!product) {
     throw new ApiError({ message: 'Product not found', statusCode: StatusCodes.NOT_FOUND });
   }
 
+  await product.deleteOne();
+
   return successResponse(res, {
     message: 'Product deleted successfully',
-    data: { product },
+    data: { productId: id },
   });
 });
 

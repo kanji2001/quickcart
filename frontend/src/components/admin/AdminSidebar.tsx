@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { BarChart3, Package, ShoppingBag, Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const links = [
   { to: '/admin', label: 'Dashboard', icon: BarChart3 },
@@ -8,9 +9,19 @@ const links = [
   { to: '/admin/users', label: 'Customers', icon: Users },
 ];
 
-export const AdminSidebar = () => (
-  <aside className="hidden md:flex w-64 flex-shrink-0 flex-col border-r bg-background/60 backdrop-blur">
-    <div className="p-6 border-b">
+type AdminSidebarProps = {
+  className?: string;
+  variant?: 'desktop' | 'sheet';
+};
+
+const variantClasses: Record<Required<AdminSidebarProps>['variant'], string> = {
+  desktop: 'hidden lg:flex lg:flex-col',
+  sheet: 'flex flex-col',
+};
+
+export const AdminSidebar = ({ className, variant = 'desktop' }: AdminSidebarProps) => (
+  <aside className={cn('w-64 flex-shrink-0 border-r bg-background/60 backdrop-blur', variantClasses[variant], className)}>
+    <div className="border-b p-6">
       <p className="text-lg font-semibold">QuickCart Admin</p>
       <p className="text-xs text-muted-foreground">Manage catalogue & sales</p>
     </div>

@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/api/admin';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,11 +11,38 @@ import { Input } from '@/components/ui/input';
 import { ShieldCheck, ShieldOff, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
+const USER_ROLES = ['', 'user', 'admin'] as const;
+
+type RoleFilter = (typeof USER_ROLES)[number];
+
 export const AdminUsers = () => {
-  const [search, setSearch] = useState('');
-  const [role, setRole] = useState('');
-  const [page, setPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchParam = searchParams.get('search') ?? '';
+  const roleParam = (searchParams.get('role') as RoleFilter | null) ?? '';
+  const pageParam = Number(searchParams.get('page') ?? '1');
+
+  const [search, setSearch] = useState(searchParam);
+  const [role, setRole] = useState<RoleFilter>(roleParam);
+  const [page, setPage] = useState(pageParam);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    setSearch(searchParam);
+    setRole(roleParam);
+    setPage(pageParam);
+  }, [searchParam, roleParam, pageParam]);
+
+  const updateParams = (updates: Record<string, string | number | undefined>) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === undefined || value === '' || value === null) {
+        next.delete(key);
+      } else {
+        next.set(key, String(value));
+      }
+    });
+    setSearchParams(next, { replace: true });
+  };
 
   const params = useMemo(() => ({ search: search || undefined, role: role || undefined, page }), [search, role, page]);
 
@@ -84,14 +112,16 @@ export const AdminUsers = () => {
               placeholder="Search name or email"
               value={search}
               onChange={(event) => {
-                setSearch(event.target.value);
+                const value = event.target.value;
+                setSearch(value);
                 setPage(1);
+                updateParams({ search: value || undefined, page: 1 });
               }}
               className="pl-9"
             />
           </div>
           <div className="flex gap-2">
-            {['', 'user', 'admin'].map((value) => (
+            {USER_ROLES.map((value) => (
               <Button
                 key={value || 'all'}
                 variant={role === value ? 'default' : 'outline'}
@@ -99,6 +129,7 @@ export const AdminUsers = () => {
                 onClick={() => {
                   setRole(value);
                   setPage(1);
+                  updateParams({ role: value || undefined, page: 1 });
                 }}
               >
                 {value ? value.charAt(0).toUpperCase() + value.slice(1) : 'All'}
@@ -180,14 +211,27 @@ export const AdminUsers = () => {
           Page {pagination.page} of {pagination.pages}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => setPage((prev) => prev - 1)}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pagination.page <= 1}
+            onClick={() => {
+              const nextPage = pagination.page - 1;
+              setPage(nextPage);
+              updateParams({ page: nextPage });
+            }}
+          >
             Prev
           </Button>
           <Button
             variant="outline"
             size="sm"
             disabled={pagination.page >= pagination.pages}
-            onClick={() => setPage((prev) => prev + 1)}
+            onClick={() => {
+              const nextPage = pagination.page + 1;
+              setPage(nextPage);
+              updateParams({ page: nextPage });
+            }}
           >
             Next
           </Button>

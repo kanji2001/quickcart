@@ -11,23 +11,23 @@ export const AdminLayout = () => {
   const user = useAuthStore(selectAuthUser);
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-muted/30">
+    <div className="min-h-[calc(100vh-64px)] bg-muted/30 overflow-x-hidden">
       <div className="flex">
-        <AdminSidebar />
+        <AdminSidebar variant="desktop" />
 
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" className="md:hidden fixed top-20 left-4 z-30">
+            <Button variant="ghost" className="lg:hidden fixed top-20 left-4 z-30">
               <Menu className="h-5 w-5" />
               <span className="sr-only">Open admin navigation</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-64">
-            <AdminSidebar />
+          <SheetContent side="left" className="w-72 max-w-[90vw] p-0">
+            <AdminSidebar variant="sheet" className="w-full border-none" />
           </SheetContent>
         </Sheet>
 
-        <div className="flex-1 p-4 md:p-8">
+        <div className="flex-1 p-4 md:p-6 lg:p-8">
           <header className="mb-6 flex flex-col gap-2 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Admin Dashboard</h1>

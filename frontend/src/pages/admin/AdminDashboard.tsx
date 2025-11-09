@@ -4,19 +4,36 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils/number';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
-const MetricCard = ({ label, value, helper }: { label: string; value: string | number; helper?: string }) => (
-  <Card className="shadow-sm">
-    <CardHeader>
-      <CardTitle className="text-sm text-muted-foreground font-medium">{label}</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p className="text-2xl font-semibold">{value}</p>
-      {helper ? <p className="text-xs text-muted-foreground mt-2">{helper}</p> : null}
-    </CardContent>
-  </Card>
+const MetricCard = ({
+  label,
+  value,
+  helper,
+  onClick,
+}: {
+  label: string;
+  value: string | number;
+  helper?: string;
+  onClick?: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="text-left"
+    style={{ width: '100%' }}
+  >
+    <Card className={`shadow-sm ${onClick ? 'hover:shadow-md transition-shadow' : ''}`}>
+      <CardHeader>
+        <CardTitle className="text-sm text-muted-foreground font-medium">{label}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-2xl font-semibold">{value}</p>
+        {helper ? <p className="text-xs text-muted-foreground mt-2">{helper}</p> : null}
+      </CardContent>
+    </Card>
+  </button>
 );
 
 const DashboardLoading = () => (
@@ -54,6 +71,7 @@ const DashboardLoading = () => (
 );
 
 export const AdminDashboard = () => {
+  const navigate = useNavigate();
   const { data, isLoading, isError, refetch } = useAdminDashboard();
 
   if (isLoading) {
@@ -76,10 +94,28 @@ export const AdminDashboard = () => {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Total Revenue" value={formatCurrency(totals.revenue)} helper="Completed payments" />
-        <MetricCard label="Orders" value={totals.orders} helper={`Delivered ${totals.deliveredOrders}`} />
-        <MetricCard label="Active Products" value={totals.products} />
-        <MetricCard label="Customers" value={totals.users} />
+        <MetricCard
+          label="Total Revenue"
+          value={formatCurrency(totals.revenue)}
+          helper="Completed payments"
+          onClick={() => navigate('/admin/orders')}
+        />
+        <MetricCard
+          label="Orders"
+          value={totals.orders}
+          helper={`Delivered ${totals.deliveredOrders}`}
+          onClick={() => navigate('/admin/orders')}
+        />
+        <MetricCard
+          label="Active Products"
+          value={totals.products}
+          onClick={() => navigate('/admin/products?status=active')}
+        />
+        <MetricCard
+          label="Customers"
+          value={totals.users}
+          onClick={() => navigate('/admin/users')}
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -165,7 +201,7 @@ export const AdminDashboard = () => {
                       <TableCell>{product.sold}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="outline" size="sm" asChild>
-                          <Link to={`/admin/products?sku=${product.sku}`}>Manage</Link>
+                          <Link to={`/admin/products?search=${encodeURIComponent(product.sku ?? '')}`}>Manage</Link>
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -201,7 +237,9 @@ export const AdminDashboard = () => {
                 topProducts.map((product) => (
                   <TableRow key={product._id}>
                     <TableCell>
-                      <div className="font-medium">{product.name}</div>
+                      <Link to={`/admin/products?search=${encodeURIComponent(product.sku ?? '')}`} className="font-medium hover:underline">
+                        {product.name}
+                      </Link>
                       <div className="text-xs text-muted-foreground">{product.sku}</div>
                     </TableCell>
                     <TableCell>{product.sold}</TableCell>

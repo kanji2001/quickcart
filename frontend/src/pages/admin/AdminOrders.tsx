@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,9 +9,19 @@ import { useQuery } from '@tanstack/react-query';
 import { formatCurrency } from '@/utils/number';
 import { Badge } from '@/components/ui/badge';
 
+const orderStatuses = ['', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+
 export const AdminOrders = () => {
-  const [status, setStatus] = useState('');
-  const [page, setPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusParam = searchParams.get('status') ?? '';
+  const pageParam = Number(searchParams.get('page') ?? '1');
+  const [status, setStatus] = useState(statusParam);
+  const [page, setPage] = useState(pageParam);
+
+  useEffect(() => {
+    setStatus(statusParam);
+    setPage(pageParam);
+  }, [statusParam, pageParam]);
 
   const params = useMemo(() => ({ status: status || undefined, page }), [status, page]);
 
@@ -22,6 +33,29 @@ export const AdminOrders = () => {
     },
     keepPreviousData: true,
   });
+
+  const updateParams = (updates: Record<string, string | number | undefined>) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === undefined || value === '' || value === null) {
+        next.delete(key);
+      } else {
+        next.set(key, String(value));
+      }
+    });
+    setSearchParams(next, { replace: true });
+  };
+
+  const handleStatusChange = (value: string) => {
+    setStatus(value);
+    setPage(1);
+    updateParams({ status: value || undefined, page: 1 });
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    setPage(nextPage);
+    updateParams({ page: nextPage });
+  };
 
   if (isLoading) {
     return (
@@ -56,15 +90,12 @@ export const AdminOrders = () => {
       <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <CardTitle className="text-base">Orders</CardTitle>
         <div className="flex gap-2 flex-wrap">
-          {['', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'].map((value) => (
+          {orderStatuses.map((value) => (
             <Button
               key={value || 'all'}
               variant={status === value ? 'default' : 'outline'}
               size="sm"
-              onClick={() => {
-                setStatus(value);
-                setPage(1);
-              }}
+              onClick={() => handleStatusChange(value)}
             >
               {value ? value.charAt(0).toUpperCase() + value.slice(1) : 'All'}
             </Button>
@@ -121,14 +152,14 @@ export const AdminOrders = () => {
           Page {pagination.page} of {pagination.pages}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => setPage((prev) => prev - 1)}>
+          <Button variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => handlePageChange(pagination.page - 1)}>
             Prev
           </Button>
           <Button
             variant="outline"
             size="sm"
             disabled={pagination.page >= pagination.pages}
-            onClick={() => setPage((prev) => prev + 1)}
+            onClick={() => handlePageChange(pagination.page + 1)}
           >
             Next
           </Button>

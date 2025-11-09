@@ -99,7 +99,12 @@ export const adminApi = {
   users: (params?: { page?: number; limit?: number; search?: string; role?: 'user' | 'admin' }) =>
     http.get<ApiResponse<AdminUsersResponse>>(API_ROUTES.admin.users, { params }),
   analytics: () => http.get<ApiResponse<AdminAnalyticsResponse>>(API_ROUTES.admin.analytics),
+  createProduct: (payload: FormData) =>
+    http.post<ApiResponse<{ product: Product }>>(API_ROUTES.products.root, payload, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   updateProduct: (id: string, payload: Partial<Product>) => http.put<ApiResponse<{ product: Product }>>(`/products/${id}`, payload),
+  deleteProduct: (id: string) => http.delete<ApiResponse<{ product: Product }>>(`/products/${id}`),
   toggleUserRole: (id: string, role: 'user' | 'admin') =>
     http.put<ApiResponse<{ user: AuthUser }>>(API_ROUTES.admin.userRole(id), { role }),
   toggleUserBlock: (id: string, isBlocked: boolean) =>

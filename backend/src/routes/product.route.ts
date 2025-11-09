@@ -21,6 +21,7 @@ import {
   productSlugParamSchema,
   updateProductSchema,
 } from '../validators/product.validator';
+import { upload } from '../middlewares/upload.middleware';
 
 const router = Router();
 
@@ -32,7 +33,7 @@ router.get('/:idOrSlug', validateResource(productSlugParamSchema), getProduct);
 router.get('/:id/reviews', validateResource(productIdParamSchema), getProductReviews);
 router.get('/:idOrSlug/related', validateResource(productSlugParamSchema), getRelatedProducts);
 
-router.post('/', protect, isAdmin, validateResource(createProductSchema), createProduct);
+router.post('/', protect, isAdmin, upload.single('image'), validateResource(createProductSchema), createProduct);
 router.put('/:id', protect, isAdmin, validateResource(updateProductSchema), updateProduct);
 router.delete('/:id', protect, isAdmin, validateResource(productIdParamSchema), deleteProduct);
 
