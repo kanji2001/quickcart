@@ -1,11 +1,24 @@
 import { http } from '@/lib/http-client';
 import { API_ROUTES } from '@/config/api';
-import type { ApiResponse, PaginatedResponse } from '@/types/api';
+import type { Address, ApiResponse, Order, PaginatedResponse } from '@/types/api';
 
 export type OrderListFilters = {
   page?: number;
   limit?: number;
   status?: string;
+};
+
+export type CreateOrderItemPayload = {
+  productId: string;
+  quantity: number;
+};
+
+export type CreateOrderPayload = {
+  items: CreateOrderItemPayload[];
+  shippingAddress: Address;
+  billingAddress: Address;
+  paymentMethod: 'razorpay' | 'cod';
+  couponCode?: string;
 };
 
 export const buildQuery = (filters: OrderListFilters = {}) => {
@@ -20,15 +33,17 @@ export const buildQuery = (filters: OrderListFilters = {}) => {
 };
 
 export const ordersApi = {
+  create: (payload: CreateOrderPayload) =>
+    http.post<ApiResponse<{ order: Order }>>(API_ROUTES.orders.root, payload),
   list: (filters?: OrderListFilters) =>
     http.get<
       ApiResponse<{
-        items: unknown[];
-        pagination: PaginatedResponse<unknown>['pagination'];
+        items: Order[];
+        pagination: PaginatedResponse<Order>['pagination'];
       }>
     >(`${API_ROUTES.orders.root}${buildQuery(filters)}`),
-  detail: (orderId: string) => http.get<ApiResponse<{ order: unknown }>>(API_ROUTES.orders.byId(orderId)),
+  detail: (orderId: string) => http.get<ApiResponse<{ order: Order }>>(API_ROUTES.orders.byId(orderId)),
   cancel: (orderId: string, reason?: string) =>
-    http.put<ApiResponse<{ order: unknown }>>(API_ROUTES.orders.cancel(orderId), { reason }),
+    http.put<ApiResponse<{ order: Order }>>(API_ROUTES.orders.cancel(orderId), { reason }),
 };
 
