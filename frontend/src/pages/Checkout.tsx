@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
@@ -12,6 +12,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { LoadingState } from '@/components/shared/LoadingState';
 import { useCartQuery, cartQueryKey } from '@/hooks/cart/use-cart';
@@ -21,6 +22,9 @@ import { paymentApi } from '@/api/payment';
 import { useCreateOrderMutation } from '@/hooks/orders/use-create-order';
 import { ordersQueryKey } from '@/hooks/orders/use-orders';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAddressesQuery } from '@/hooks/user/use-addresses';
+import type { Address, AddressInput } from '@/types/api';
+import { cn, formatCurrency } from '@/lib/utils';
 
 const addressSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
@@ -40,6 +44,7 @@ const checkoutSchema = z
     billingAddress: addressSchema.optional(),
     paymentMethod: z.enum(['razorpay', 'cod']),
     couponCode: z.string().optional(),
+    saveAddress: z.boolean().optional(),
   })
   .refine(
     (data) => data.billingSameAsShipping || Boolean(data.billingAddress),
@@ -58,7 +63,7 @@ const getErrorMessage = (error: unknown): string => {
   return 'Something went wrong. Please try again.';
 };
 
-const normalizeAddress = (address: CheckoutFormValues['shippingAddress']) => ({
+const normalizeAddress = (address: CheckoutFormValues['shippingAddress']): AddressInput => ({
   fullName: String(address.fullName ?? '').trim(),
   phone: String(address.phone ?? '').trim(),
   addressLine1: String(address.addressLine1 ?? '').trim(),
@@ -77,6 +82,9 @@ const Checkout = () => {
   const { data: cart, isLoading: isCartLoading, isError: isCartError } = useCartQuery();
   const createOrderMutation = useCreateOrderMutation();
   const [isProcessing, setIsProcessing] = useState(false);
+  const addressesQuery = useAddressesQuery({ enabled: isAuthenticated });
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('custom');
+  const addressInitializedRef = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -101,10 +109,37 @@ const Checkout = () => {
       billingAddress: undefined,
       paymentMethod: 'razorpay',
       couponCode: '',
+      saveAddress: true,
     },
   });
 
   const billingSameAsShipping = form.watch('billingSameAsShipping');
+  const saveAddress = form.watch('saveAddress');
+  const savedAddresses = addressesQuery.data ?? [];
+
+  const applyAddressToForm = (address: Address) => {
+    form.setValue('shippingAddress.fullName', address.fullName);
+    form.setValue('shippingAddress.phone', address.phone);
+    form.setValue('shippingAddress.addressLine1', address.addressLine1);
+    form.setValue('shippingAddress.addressLine2', address.addressLine2 ?? '');
+    form.setValue('shippingAddress.city', address.city);
+    form.setValue('shippingAddress.state', address.state);
+    form.setValue('shippingAddress.pincode', address.pincode);
+    form.setValue('shippingAddress.country', address.country ?? 'India');
+
+    if (form.getValues('billingSameAsShipping')) {
+      form.setValue('billingAddress', undefined);
+    }
+  };
+
+  useEffect(() => {
+    if (!addressInitializedRef.current && savedAddresses.length > 0) {
+      const defaultAddress = savedAddresses.find((address) => address.isDefault) ?? savedAddresses[0];
+      setSelectedAddressId(defaultAddress._id);
+      applyAddressToForm(defaultAddress);
+      addressInitializedRef.current = true;
+    }
+  }, [savedAddresses]);
 
   const cartSummary = useMemo(() => {
     if (!cart || cart.items.length === 0) {
@@ -195,6 +230,7 @@ const handlePaymentSuccess = async (
         billingAddress,
         paymentMethod: values.paymentMethod,
         couponCode: values.couponCode?.trim() ? values.couponCode.trim() : undefined,
+        saveAddress: values.saveAddress ?? false,
       });
 
       if (values.paymentMethod === 'cod') {
@@ -306,6 +342,65 @@ const handlePaymentSuccess = async (
               <CardTitle>Shipping Details</CardTitle>
             </CardHeader>
             <CardContent>
+              {addressesQuery.isSuccess && savedAddresses.length > 0 ? (
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center justify-between">
+                    <Label>Saved Addresses</Label>
+                    <Button variant="link" className="px-0 h-auto" asChild>
+                      <Link to="/profile">Manage addresses</Link>
+                    </Button>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {savedAddresses.map((address) => {
+                      const isSelected = selectedAddressId === address._id;
+                      return (
+                        <button
+                          type="button"
+                          key={address._id}
+                          className={cn(
+                            'text-left rounded-lg border p-3 transition-all focus:outline-none focus:ring-2 focus:ring-ring',
+                            isSelected ? 'border-primary shadow-sm ring-1 ring-primary' : 'hover:border-primary/60',
+                          )}
+                          onClick={() => {
+                            setSelectedAddressId(address._id);
+                            applyAddressToForm(address);
+                          }}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="font-semibold">{address.fullName}</p>
+                              <p className="text-xs text-muted-foreground capitalize">
+                                {address.addressType ?? 'home'} • +91 {address.phone}
+                              </p>
+                            </div>
+                            {address.isDefault ? <Badge>Default</Badge> : null}
+                          </div>
+                          <p className="text-sm mt-2">
+                            {address.addressLine1}
+                            {address.addressLine2 ? `, ${address.addressLine2}` : ''}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {address.city}, {address.state} {address.pincode}
+                          </p>
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      className={cn(
+                        'flex items-center justify-center rounded-lg border border-dashed p-3 text-sm text-muted-foreground transition hover:border-primary/60',
+                        selectedAddressId === 'custom' ? 'border-primary' : '',
+                      )}
+                      onClick={() => {
+                        setSelectedAddressId('custom');
+                      }}
+                    >
+                      Use a different address
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="shipping-fullName">Full Name</Label>
@@ -537,7 +632,7 @@ const handlePaymentSuccess = async (
                         <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                       </div>
                     </div>
-                    <p className="font-semibold">₹{(item.price * item.quantity).toFixed(2)}</p>
+                    <p className="font-semibold">{formatCurrency(item.price * item.quantity)}</p>
                   </div>
                 ))}
               </div>
@@ -547,16 +642,16 @@ const handlePaymentSuccess = async (
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-medium">₹{cartSummary.subtotal.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(cartSummary.subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Estimated Tax</span>
-                  <span className="font-medium">₹{cartSummary.taxAmount.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(cartSummary.taxAmount)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Shipping</span>
                   <span className="font-medium">
-                    {cartSummary.shippingCharges === 0 ? 'Free' : `₹${cartSummary.shippingCharges.toFixed(2)}`}
+                    {cartSummary.shippingCharges === 0 ? 'Free' : formatCurrency(cartSummary.shippingCharges)}
                   </span>
                 </div>
               </div>
@@ -564,12 +659,27 @@ const handlePaymentSuccess = async (
             <CardFooter className="flex flex-col space-y-4">
               <div className="flex items-center justify-between w-full text-lg font-semibold">
                 <span>Total</span>
-                <span>₹{cartSummary.totalAmount.toFixed(2)}</span>
+                <span>{formatCurrency(cartSummary.totalAmount)}</span>
               </div>
 
               <div className="w-full space-y-2">
                 <Label htmlFor="couponCode">Coupon Code</Label>
                 <Input id="couponCode" placeholder="Enter coupon code (optional)" {...form.register('couponCode')} />
+              </div>
+
+              <div className="w-full rounded-lg border p-4 space-y-1">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium">Save this address for future orders</p>
+                    <p className="text-xs text-muted-foreground">
+                      We will remember these shipping details as your default address.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={saveAddress ?? false}
+                    onCheckedChange={(checked) => form.setValue('saveAddress', checked)}
+                  />
+                </div>
               </div>
 
               <Button

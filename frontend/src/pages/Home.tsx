@@ -14,7 +14,7 @@ const FEATURE_HIGHLIGHTS = [
   {
     icon: Truck,
     title: 'Free Shipping',
-    description: 'On orders over $100',
+    description: 'On orders over ₹7,500',
   },
   {
     icon: Shield,

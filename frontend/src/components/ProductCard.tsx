@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import type { Product } from '@/types/product';
 import { useCartStore } from '@/stores/cart-store';
 import { useAddCartItemMutation } from '@/hooks/cart/use-cart';
+import { formatCurrency } from '@/lib/utils';
 
 type ProductCardProps = {
   product: Product;
@@ -100,9 +101,11 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
               <span className="text-xs text-muted-foreground">({product.numReviews ?? 0})</span>
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-lg font-bold">${product.discountPrice ?? product.price}</span>
+              <span className="text-lg font-bold">{formatCurrency(product.discountPrice ?? product.price ?? 0)}</span>
               {product.discountPrice && (
-                <span className="text-sm text-muted-foreground line-through">${product.price}</span>
+                <span className="text-sm text-muted-foreground line-through">
+                  {formatCurrency(product.price ?? 0)}
+                </span>
               )}
             </div>
             {product.stock < 10 && product.stock > 0 && (

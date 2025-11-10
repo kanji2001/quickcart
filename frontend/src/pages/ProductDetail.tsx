@@ -18,11 +18,7 @@ import { useAuthStore, selectIsAuthenticated } from '@/stores/auth-store';
 import { useAddCartItemMutation } from '@/hooks/cart/use-cart';
 import { toast } from 'sonner';
 import { productsApi } from '@/api/products';
-
-const formatCurrency = (value?: number) => {
-  if (!value && value !== 0) return '$0.00';
-  return `$${value.toFixed(2)}`;
-};
+import { formatCurrency } from '@/lib/utils';
 
 const ProductNotFound = () => (
   <div className="min-h-screen flex items-center justify-center">
@@ -248,7 +244,7 @@ export default function ProductDetail() {
                 <Truck className="w-5 h-5 text-primary" />
                 <div className="text-sm">
                   <div className="font-medium">Free Shipping</div>
-                  <div className="text-muted-foreground">On orders over $100</div>
+                  <div className="text-muted-foreground">On orders over ₹7,500</div>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">

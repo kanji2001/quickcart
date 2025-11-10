@@ -17,7 +17,7 @@ const envSchema = z.object({
   JWT_REFRESH_EXPIRE: z.string().default('7d'),
   RAZORPAY_KEY_ID: z.string().min(1, 'RAZORPAY_KEY_ID is required'),
   RAZORPAY_KEY_SECRET: z.string().min(1, 'RAZORPAY_KEY_SECRET is required'),
-  RAZORPAY_WEBHOOK_SECRET: z.string().min(1, 'RAZORPAY_WEBHOOK_SECRET is required'),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
   CLOUDINARY_CLOUD_NAME: z.string().min(1, 'CLOUDINARY_CLOUD_NAME is required'),
   CLOUDINARY_API_KEY: z.string().min(1, 'CLOUDINARY_API_KEY is required'),
   CLOUDINARY_API_SECRET: z.string().min(1, 'CLOUDINARY_API_SECRET is required'),
@@ -64,7 +64,7 @@ export const envConfig = {
   razorpay: {
     keyId: env.RAZORPAY_KEY_ID,
     keySecret: env.RAZORPAY_KEY_SECRET,
-    webhookSecret: env.RAZORPAY_WEBHOOK_SECRET,
+    webhookSecret: env.RAZORPAY_WEBHOOK_SECRET ?? null,
   },
   cloudinary: {
     cloudName: env.CLOUDINARY_CLOUD_NAME,

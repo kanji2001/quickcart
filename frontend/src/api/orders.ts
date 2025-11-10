@@ -1,6 +1,6 @@
 import { http } from '@/lib/http-client';
 import { API_ROUTES } from '@/config/api';
-import type { Address, ApiResponse, Order, PaginatedResponse } from '@/types/api';
+import type { AddressInput, ApiResponse, Order, PaginatedResponse } from '@/types/api';
 
 export type OrderListFilters = {
   page?: number;
@@ -15,10 +15,11 @@ export type CreateOrderItemPayload = {
 
 export type CreateOrderPayload = {
   items: CreateOrderItemPayload[];
-  shippingAddress: Address;
-  billingAddress: Address;
+  shippingAddress: AddressInput;
+  billingAddress: AddressInput;
   paymentMethod: 'razorpay' | 'cod';
   couponCode?: string;
+  saveAddress?: boolean;
 };
 
 export const buildQuery = (filters: OrderListFilters = {}) => {

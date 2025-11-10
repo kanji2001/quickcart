@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useProducts } from '@/hooks/products/use-products';
+import { formatCurrency } from '@/lib/utils';
 
 export default function Deals() {
   const [sortBy, setSortBy] = useState('discount-high');
@@ -151,7 +152,7 @@ export default function Deals() {
                 <span>
                   Total savings up to{' '}
                   <strong className="text-2xl gradient-primary bg-clip-text text-transparent">
-                    {productsQuery.isLoading ? '—' : `$${totalSavings.toFixed(2)}`}
+                    {productsQuery.isLoading ? '—' : formatCurrency(totalSavings)}
                   </strong>
                 </span>
               </div>

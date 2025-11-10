@@ -50,12 +50,12 @@ export const addCartItem = asyncHandler(async (req: Request, res: Response) => {
       throw new ApiError({ message: 'Insufficient stock', statusCode: StatusCodes.BAD_REQUEST });
     }
     existingItem.quantity = newQuantity;
-    existingItem.price = product.price;
+    existingItem.price = product.discountPrice ?? product.price;
   } else {
     cart.items.push({
       product: product._id,
       quantity,
-      price: product.price,
+      price: product.discountPrice ?? product.price,
     });
   }
 
@@ -95,7 +95,7 @@ export const updateCartItem = asyncHandler(async (req: Request, res: Response) =
       throw new ApiError({ message: 'Insufficient stock', statusCode: StatusCodes.BAD_REQUEST });
     }
     item.quantity = quantity;
-    item.price = product.price;
+    item.price = product.discountPrice ?? product.price;
   }
 
   cart.calculateTotals();

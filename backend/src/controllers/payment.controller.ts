@@ -72,6 +72,13 @@ export const verifyRazorpayPayment = asyncHandler(async (req: Request, res: Resp
 });
 
 export const handleRazorpayWebhook = asyncHandler(async (req: Request, res: Response) => {
+  if (!envConfig.razorpay.webhookSecret) {
+    return res.status(StatusCodes.OK).json({
+      received: false,
+      message: 'Webhook secret not configured; webhook events are ignored.',
+    });
+  }
+
   const signature = req.headers['x-razorpay-signature'] as string;
   const rawBody = req.body instanceof Buffer ? req.body : Buffer.from(JSON.stringify(req.body));
   const body = rawBody.toString();

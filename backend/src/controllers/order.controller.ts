@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import { StatusCodes } from 'http-status-codes';
 import mongoose from 'mongoose';
-import { CartModel, CouponModel, OrderModel, ProductModel } from '../models';
+import { AddressModel, CartModel, CouponModel, OrderModel, ProductModel } from '../models';
 import { successResponse } from '../utils/response';
 import { ApiError } from '../utils/api-error';
 import { getPagination } from '../utils/pagination';
@@ -44,12 +44,64 @@ const calculateOrderTotals = async (
   };
 };
 
+const normalizeAddressForComparison = (address: any) => ({
+  fullName: address.fullName?.trim(),
+  phone: address.phone?.trim(),
+  addressLine1: address.addressLine1?.trim(),
+  addressLine2: address.addressLine2?.trim() || undefined,
+  city: address.city?.trim(),
+  state: address.state?.trim(),
+  pincode: address.pincode?.trim(),
+  country: address.country?.trim(),
+});
+
+const upsertDefaultAddress = async (
+  userId: mongoose.Types.ObjectId,
+  address: {
+    fullName: string;
+    phone: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    state: string;
+    pincode: string;
+    country: string;
+  },
+) => {
+  const normalized = normalizeAddressForComparison(address);
+
+  const existing = await AddressModel.findOne({
+    user: userId,
+    ...normalized,
+  });
+
+  let defaultAddress;
+
+  if (existing) {
+    existing.set({ ...address, isDefault: true });
+    defaultAddress = await existing.save();
+  } else {
+    defaultAddress = await AddressModel.create({
+      user: userId,
+      ...address,
+      isDefault: true,
+    });
+  }
+
+  await AddressModel.updateMany(
+    { user: userId, _id: { $ne: defaultAddress._id } },
+    { $set: { isDefault: false } },
+  );
+
+  return defaultAddress;
+};
+
 export const createOrder = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError({ message: 'Unauthorized', statusCode: StatusCodes.UNAUTHORIZED });
   }
 
-  const { items, shippingAddress, billingAddress, paymentMethod, couponCode } = req.body;
+  const { items, shippingAddress, billingAddress, paymentMethod, couponCode, saveAddress } = req.body;
 
   if (!Array.isArray(items) || items.length === 0) {
     throw new ApiError({ message: 'Order items are required', statusCode: StatusCodes.BAD_REQUEST });
@@ -70,9 +122,9 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
       product: product._id,
       productName: product.name,
       productImage: product.thumbnail?.url,
-      price: product.price,
+      price: product.discountPrice ?? product.price,
       quantity: item.quantity,
-      subtotal: product.price * item.quantity,
+      subtotal: (product.discountPrice ?? product.price) * item.quantity,
     };
   });
 
@@ -103,6 +155,10 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
   }
 
   await CartModel.findOneAndUpdate({ user: req.user._id }, { items: [], totalAmount: 0, totalItems: 0 });
+
+  if (saveAddress) {
+    await upsertDefaultAddress(req.user._id, shippingAddress);
+  }
 
   return successResponse(res, {
     message: 'Order placed successfully',

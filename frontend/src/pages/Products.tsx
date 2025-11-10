@@ -22,6 +22,7 @@ import { ErrorState } from '@/components/shared/ErrorState';
 import { useProducts } from '@/hooks/products/use-products';
 import { useCategories } from '@/hooks/categories/use-categories';
 import type { ProductQueryParams } from '@/api/products';
+import { formatCurrency } from '@/lib/utils';
 
 type SortOption = 'featured' | 'newest' | 'price-low' | 'price-high' | 'rating';
 
@@ -131,8 +132,8 @@ const FilterContent = ({
       <div className="px-2">
         <Slider min={0} max={100000} step={100} value={priceRange} onValueChange={onPriceRangeChange} className="mb-4" />
         <div className="flex justify-between text-sm text-muted-foreground">
-          <span>${priceRange[0]}</span>
-          <span>${priceRange[1]}</span>
+          <span>{formatCurrency(priceRange[0])}</span>
+          <span>{formatCurrency(priceRange[1])}</span>
         </div>
       </div>
     </div>

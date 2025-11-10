@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import { AddressModel, UserModel } from '../models';
 import { successResponse } from '../utils/response';
 import { ApiError } from '../utils/api-error';
+import { uploadToCloudinary, deleteFromCloudinary } from '../services/cloudinary.service';
 
 const sanitizeUser = (user: any) => {
   const { password, refreshToken, resetPasswordToken, resetPasswordExpire, verificationToken, __v, ...rest } = user.toObject();
@@ -22,23 +23,62 @@ export const getProfile = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+export const getAddresses = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new ApiError({ message: 'Unauthorized', statusCode: StatusCodes.UNAUTHORIZED });
+  }
+
+  const addresses = await AddressModel.find({ user: req.user._id }).sort({ isDefault: -1, updatedAt: -1, createdAt: -1 });
+
+  return successResponse(res, {
+    message: 'Addresses fetched successfully',
+    data: { addresses },
+  });
+});
+
 export const updateProfile = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError({ message: 'Unauthorized', statusCode: StatusCodes.UNAUTHORIZED });
   }
 
-  const user = await UserModel.findByIdAndUpdate(
-    req.user._id,
-    {
-      name: req.body.name,
-      phone: req.body.phone,
-    },
-    { new: true, runValidators: true },
-  );
+  const user = await UserModel.findById(req.user._id);
 
   if (!user) {
     throw new ApiError({ message: 'User not found', statusCode: StatusCodes.NOT_FOUND });
   }
+
+  const { name, phone, removeAvatar } = req.body as { name?: string; phone?: string; removeAvatar?: boolean };
+
+  if (name !== undefined) {
+    user.name = name;
+  }
+
+  if (phone !== undefined) {
+    user.phone = phone;
+  }
+
+  const shouldRemoveAvatar = Boolean(removeAvatar) && !req.file;
+
+  if (req.file) {
+    const uploadResult = await uploadToCloudinary(req.file.buffer, 'quickcart/user-avatars', {
+      transformation: [{ width: 400, height: 400, crop: 'fill', gravity: 'face' }],
+    });
+
+    if (user.avatar?.publicId) {
+      await deleteFromCloudinary(user.avatar.publicId);
+    }
+
+    user.avatar = {
+      publicId: uploadResult.public_id,
+      url: uploadResult.secure_url,
+    };
+  } else if (shouldRemoveAvatar && user.avatar?.publicId) {
+    await deleteFromCloudinary(user.avatar.publicId);
+    delete user.avatar;
+  }
+
+  await user.save();
+  req.user = user;
 
   return successResponse(res, {
     message: 'Profile updated successfully',
@@ -76,10 +116,17 @@ export const addAddress = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError({ message: 'Unauthorized', statusCode: StatusCodes.UNAUTHORIZED });
   }
 
+  const existingAddresses = await AddressModel.find({ user: req.user._id });
+
   const address = await AddressModel.create({
     ...req.body,
     user: req.user._id,
+    isDefault: req.body.isDefault ?? existingAddresses.length === 0,
   });
+
+  if (address.isDefault) {
+    await AddressModel.updateMany({ user: req.user._id, _id: { $ne: address._id } }, { $set: { isDefault: false } });
+  }
 
   return successResponse(res, {
     message: 'Address added successfully',
@@ -94,13 +141,17 @@ export const updateAddress = asyncHandler(async (req: Request, res: Response) =>
   }
 
   const { id } = req.params;
-  const address = await AddressModel.findOneAndUpdate({ _id: id, user: req.user._id }, req.body, {
-    new: true,
-    runValidators: true,
-  });
+  const address = await AddressModel.findOne({ _id: id, user: req.user._id });
 
   if (!address) {
     throw new ApiError({ message: 'Address not found', statusCode: StatusCodes.NOT_FOUND });
+  }
+
+  address.set(req.body);
+  await address.save();
+
+  if (req.body.isDefault) {
+    await AddressModel.updateMany({ user: req.user._id, _id: { $ne: id } }, { $set: { isDefault: false } });
   }
 
   return successResponse(res, {

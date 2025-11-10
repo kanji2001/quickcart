@@ -1,23 +1,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { User } from '@/types/api';
 
-export type AuthUser = {
-  _id: string;
-  name: string;
-  email: string;
-  role: 'user' | 'admin';
-  avatar?: {
-    url?: string;
-  } | null;
-};
+export type AuthUser = User;
 
 type AuthState = {
-  user: AuthUser | null;
+  user: User | null;
   accessToken: string | null;
   isLoading: boolean;
-  setSession: (payload: { user: AuthUser; accessToken: string }) => void;
+  setSession: (payload: { user: User; accessToken: string }) => void;
   setAccessToken: (accessToken: string | null) => void;
-  setUser: (user: AuthUser | null) => void;
+  setUser: (user: User | null) => void;
   setLoading: (value: boolean) => void;
   clearSession: () => void;
 };

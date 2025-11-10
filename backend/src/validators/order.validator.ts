@@ -23,6 +23,7 @@ export const createOrderSchema = z.object({
     billingAddress: addressSchema,
     paymentMethod: z.enum(['razorpay', 'cod']),
     couponCode: z.string().optional(),
+    saveAddress: z.coerce.boolean().optional(),
   }),
 });
 

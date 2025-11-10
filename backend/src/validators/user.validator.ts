@@ -2,8 +2,18 @@ import { z } from 'zod';
 
 export const updateProfileSchema = z.object({
   body: z.object({
-    name: z.string().min(1),
-    phone: z.string().regex(/^\d{10}$/),
+    name: z
+      .string()
+      .trim()
+      .min(1, 'Name is required')
+      .max(100, 'Name must be less than 100 characters')
+      .optional(),
+    phone: z
+      .string()
+      .trim()
+      .regex(/^\d{10}$/, 'Phone number must be 10 digits')
+      .optional(),
+    removeAvatar: z.coerce.boolean().optional(),
   }),
 });
 

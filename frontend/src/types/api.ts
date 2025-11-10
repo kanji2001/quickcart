@@ -18,6 +18,19 @@ export type ImageAsset = {
   url?: string;
 };
 
+export type User = {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: 'user' | 'admin';
+  avatar?: ImageAsset;
+  isVerified?: boolean;
+  isBlocked?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export type Category = {
   _id: string;
   name: string;
@@ -73,13 +86,7 @@ export type PaginatedResponse<T> = {
 };
 
 export type AuthResponse = {
-  user: {
-    _id: string;
-    name: string;
-    email: string;
-    role: 'user' | 'admin';
-    avatar?: ImageAsset;
-  };
+  user: User;
   accessToken: string;
 };
 
@@ -99,6 +106,8 @@ export type Cart = {
 };
 
 export type Address = {
+  _id: string;
+  user?: string;
   fullName: string;
   phone: string;
   addressLine1: string;
@@ -107,6 +116,18 @@ export type Address = {
   state: string;
   pincode: string;
   country: string;
+  isDefault?: boolean;
+  addressType?: 'home' | 'office' | 'other';
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AddressInput = Omit<
+  Address,
+  '_id' | 'user' | 'isDefault' | 'addressType' | 'createdAt' | 'updatedAt'
+> & {
+  addressType?: Address['addressType'];
+  isDefault?: boolean;
 };
 
 export type OrderItem = {

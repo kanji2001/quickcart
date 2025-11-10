@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Order } from '@/types/order';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { formatCurrency } from '@/lib/utils';
 
 type OrderCardProps = {
   order: Order;
@@ -31,10 +32,10 @@ export const OrderCard = ({ order, onCancel, isCancelling }: OrderCardProps) => 
               <div>
                 <p className="font-medium">{item.productName}</p>
                 <p className="text-xs text-muted-foreground">
-                  Qty {item.quantity} · ₹{item.price}
+                  Qty {item.quantity} · {formatCurrency(item.price)}
                 </p>
               </div>
-              <p className="font-semibold">₹{item.subtotal.toFixed(2)}</p>
+              <p className="font-semibold">{formatCurrency(item.subtotal)}</p>
             </div>
           ))}
         </div>
@@ -42,25 +43,25 @@ export const OrderCard = ({ order, onCancel, isCancelling }: OrderCardProps) => 
         <div className="border-t pt-4 space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Subtotal</span>
-            <span>₹{order.subtotal.toFixed(2)}</span>
+            <span>{formatCurrency(order.subtotal)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Shipping</span>
-            <span>₹{order.shippingCharges.toFixed(2)}</span>
+            <span>{formatCurrency(order.shippingCharges)}</span>
           </div>
             <div className="flex justify-between">
             <span className="text-muted-foreground">Tax</span>
-            <span>₹{order.taxAmount.toFixed(2)}</span>
+            <span>{formatCurrency(order.taxAmount)}</span>
           </div>
           {order.discountAmount > 0 ? (
             <div className="flex justify-between text-success">
               <span>Discount</span>
-              <span>-₹{order.discountAmount.toFixed(2)}</span>
+              <span>-{formatCurrency(order.discountAmount)}</span>
             </div>
           ) : null}
           <div className="flex justify-between font-semibold">
             <span>Total</span>
-            <span>₹{order.totalAmount.toFixed(2)}</span>
+            <span>{formatCurrency(order.totalAmount)}</span>
           </div>
         </div>
 

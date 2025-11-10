@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { LoadingState } from '@/components/shared/LoadingState';
 import { useCartStore } from '@/stores/cart-store';
 import { useCartQuery, useUpdateCartItemMutation, useRemoveCartItemMutation } from '@/hooks/cart/use-cart';
+import { formatCurrency } from '@/lib/utils';
 
 const CartHeader = ({ count, onClose }: { count: number; onClose: () => void }) => (
   <div className="flex items-center justify-between p-6 border-b">
@@ -28,8 +29,9 @@ type CartSummaryProps = {
 };
 
 const CartSummary = ({ subtotal, onClose }: CartSummaryProps) => {
-  const shipping = subtotal > 0 ? (subtotal > 100 ? 0 : 10) : 0;
-  const tax = subtotal * 0.1;
+  const shippingThreshold = 999;
+  const shipping = subtotal > 0 ? (subtotal > shippingThreshold ? 0 : 59) : 0;
+  const tax = subtotal * 0.18;
   const total = subtotal + shipping + tax;
 
   return (
@@ -37,26 +39,26 @@ const CartSummary = ({ subtotal, onClose }: CartSummaryProps) => {
       <div className="space-y-2 text-sm">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Subtotal</span>
-          <span className="font-medium">${subtotal.toFixed(2)}</span>
+          <span className="font-medium">{formatCurrency(subtotal)}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Shipping</span>
-          <span className="font-medium">{shipping === 0 ? 'FREE' : `$${shipping.toFixed(2)}`}</span>
+          <span className="font-medium">{shipping === 0 ? 'FREE' : formatCurrency(shipping)}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Tax</span>
-          <span className="font-medium">${tax.toFixed(2)}</span>
+          <span className="font-medium">{formatCurrency(tax)}</span>
         </div>
         <Separator />
         <div className="flex justify-between text-base">
           <span className="font-bold">Total</span>
-          <span className="font-bold">${total.toFixed(2)}</span>
+          <span className="font-bold">{formatCurrency(total)}</span>
         </div>
       </div>
 
-      {subtotal > 0 && subtotal < 100 && (
+      {subtotal > 0 && subtotal < shippingThreshold && (
         <p className="text-xs text-center text-muted-foreground">
-          Add ${(100 - subtotal).toFixed(2)} more for free shipping
+          Add {formatCurrency(shippingThreshold - subtotal)} more for free shipping
         </p>
       )}
 
@@ -107,7 +109,7 @@ const CartItem = ({
     <img src={image ?? '/placeholder.svg'} alt={name} className="w-20 h-20 object-cover rounded-md" />
     <div className="flex-1 min-w-0">
       <h4 className="font-medium text-sm line-clamp-2 mb-1">{name}</h4>
-      <p className="text-sm font-bold">${price.toFixed(2)}</p>
+      <p className="text-sm font-bold">{formatCurrency(price)}</p>
       <div className="flex items-center gap-2 mt-2">
         <Button size="icon" variant="outline" className="h-7 w-7" onClick={onDecrease} disabled={quantity <= 1}>
           <Minus className="w-3 h-3" />

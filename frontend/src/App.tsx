@@ -17,6 +17,7 @@ import NotFound from "./pages/NotFound";
 import { useAuthSession } from "@/hooks/auth/use-auth-session";
 import Orders from "./pages/Orders";
 import Checkout from "./pages/Checkout";
+import Profile from "./pages/Profile";
 import { RequireAdmin } from "@/components/admin/RequireAdmin";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -46,6 +47,7 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/orders" element={<Orders />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/checkout" element={<Checkout />} />
 
               <Route
