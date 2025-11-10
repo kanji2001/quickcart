@@ -10,6 +10,7 @@ import { userRouter } from './user.route';
 import { wishlistRouter } from './wishlist.route';
 import { adminRouter } from './admin.route';
 import { paymentRouter } from './payment.route';
+import { supportRouter } from './support.route';
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.use('/user', userRouter);
 router.use('/wishlist', wishlistRouter);
 router.use('/admin', adminRouter);
 router.use('/payment', paymentRouter);
+router.use('/support', supportRouter);
 
 export const apiRouter = router;
 

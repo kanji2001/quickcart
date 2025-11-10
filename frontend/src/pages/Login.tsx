@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, ShoppingCart } from 'lucide-react';
+import { isAxiosError } from 'axios';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,6 +39,34 @@ export default function Login() {
     }
   }, [isAuthenticated, navigate]);
 
+  const getErrorDescription = (error: unknown): string => {
+    if (isAxiosError<{ message?: string }>(error)) {
+      const timeoutMessage = 'Server down or failed to fetch. Please try again.';
+      if (
+        error.code === 'ECONNABORTED' ||
+        error.code === 'ERR_NETWORK' ||
+        error.message?.toLowerCase().includes('timeout')
+      ) {
+        return timeoutMessage;
+      }
+
+      if (!error.response) {
+        return timeoutMessage;
+      }
+
+      const responseMessage = error.response.data?.message;
+      if (typeof responseMessage === 'string' && responseMessage.trim().length > 0) {
+        return responseMessage;
+      }
+
+      if (error.response.status >= 500) {
+        return timeoutMessage;
+      }
+    }
+
+    return 'Please check your credentials and try again.';
+  };
+
   const onSubmit = async (data: LoginFormData) => {
     loginMutation.mutate(data, {
       onSuccess: () => {
@@ -46,9 +75,9 @@ export default function Login() {
         });
         navigate('/');
       },
-      onError: () => {
+      onError: (error) => {
         toast.error('Login failed', {
-          description: 'Please check your credentials and try again.',
+          description: getErrorDescription(error),
         });
       },
     });

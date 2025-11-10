@@ -24,6 +24,14 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminUsers from "./pages/admin/AdminUsers";
+import Contact from "./pages/Contact";
+import FAQ from "./pages/FAQ";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
+import Cookies from "./pages/Cookies";
+import About from "./pages/About";
+import ShippingReturns from "./pages/ShippingReturns";
+import TrackOrder from "./pages/TrackOrder";
 
 const App = () => {
   useAuthSession();
@@ -49,6 +57,14 @@ const App = () => {
               <Route path="/orders" element={<Orders />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/checkout" element={<Checkout />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/faq" element={<FAQ />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/cookies" element={<Cookies />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/shipping" element={<ShippingReturns />} />
+              <Route path="/track-order" element={<TrackOrder />} />
 
               <Route
                 path="/admin"

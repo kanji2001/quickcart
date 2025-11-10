@@ -66,5 +66,8 @@ export const API_ROUTES = {
     userBlock: (id: string) => `/admin/users/${id}/block`,
     analytics: '/admin/analytics',
   },
+  support: {
+    contact: '/support/contact',
+  },
 };
 

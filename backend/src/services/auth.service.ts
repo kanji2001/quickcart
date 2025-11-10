@@ -56,7 +56,7 @@ export const authService = {
   async login(payload: LoginPayload) {
     const user = await UserModel.findOne({ email: payload.email });
     if (!user) {
-      throw new ApiError({ message: 'Invalid credentials', statusCode: StatusCodes.UNAUTHORIZED });
+      throw new ApiError({ message: 'User not found', statusCode: StatusCodes.NOT_FOUND });
     }
 
     if (user.isBlocked) {
