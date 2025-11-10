@@ -6,34 +6,50 @@ import { AddressModel, CartModel, CouponModel, OrderModel, ProductModel } from '
 import { successResponse } from '../utils/response';
 import { ApiError } from '../utils/api-error';
 import { getPagination } from '../utils/pagination';
+import { evaluateCouponForCart } from '../services/coupon.service';
 
 const calculateOrderTotals = async (
   items: Array<{ product: mongoose.Types.ObjectId; quantity: number; price: number; subtotal: number }>,
+  userId: mongoose.Types.ObjectId,
   couponCode?: string,
 ) => {
   const subtotal = items.reduce((acc, item) => acc + item.subtotal, 0);
   let discountAmount = 0;
+  let appliedCoupon:
+    | {
+        code: string;
+        description?: string;
+        discountType: 'percent' | 'flat';
+        discountValue: number;
+        minCartValue: number;
+        maxDiscount?: number;
+        discountAmount: number;
+      }
+    | undefined;
 
   if (couponCode) {
-    const coupon = await CouponModel.findOne({
-      code: couponCode.toUpperCase(),
-      isActive: true,
-      validFrom: { $lte: new Date() },
-      validUntil: { $gte: new Date() },
+    const evaluation = await evaluateCouponForCart({
+      code: couponCode,
+      cartTotal: subtotal,
+      userId,
     });
 
-    if (coupon) {
-      if (coupon.discountType === 'percentage') {
-        discountAmount = Math.min((subtotal * coupon.discountValue) / 100, coupon.maxDiscountAmount ?? Infinity);
-      } else {
-        discountAmount = coupon.discountValue;
-      }
-    }
+    discountAmount = evaluation.discountAmount;
+    appliedCoupon = {
+      code: evaluation.coupon.code,
+      description: evaluation.coupon.description ?? '',
+      discountType: evaluation.coupon.discountType,
+      discountValue: evaluation.coupon.discountValue,
+      minCartValue: evaluation.coupon.minCartValue ?? 0,
+      maxDiscount: evaluation.coupon.maxDiscount,
+      discountAmount: evaluation.discountAmount,
+    };
   }
 
-  const taxAmount = subtotal * 0.18; // placeholder GST 18%
+  const discountedSubtotal = Math.max(0, subtotal - discountAmount);
+  const taxAmount = discountedSubtotal * 0.18; // placeholder GST 18%
   const shippingCharges = subtotal > 999 ? 0 : 59;
-  const totalAmount = subtotal - discountAmount + taxAmount + shippingCharges;
+  const totalAmount = discountedSubtotal + taxAmount + shippingCharges;
 
   return {
     subtotal,
@@ -41,6 +57,7 @@ const calculateOrderTotals = async (
     taxAmount,
     shippingCharges,
     totalAmount,
+    appliedCoupon,
   };
 };
 
@@ -128,7 +145,9 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
     };
   });
 
-  const totals = await calculateOrderTotals(enrichedItems, couponCode);
+  const normalizedCouponCode = typeof couponCode === 'string' && couponCode.trim().length > 0 ? couponCode.trim() : undefined;
+
+  const totals = await calculateOrderTotals(enrichedItems, req.user._id, normalizedCouponCode);
 
   const order = await OrderModel.create({
     user: req.user._id,
@@ -138,7 +157,8 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
     paymentMethod,
     paymentStatus: paymentMethod === 'cod' ? 'pending' : 'pending',
     orderStatus: 'pending',
-    couponCode,
+    couponCode: totals.appliedCoupon?.code ?? undefined,
+    appliedCoupon: totals.appliedCoupon,
     ...totals,
   });
 
@@ -150,8 +170,8 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
     ),
   );
 
-  if (couponCode) {
-    await CouponModel.findOneAndUpdate({ code: couponCode.toUpperCase() }, { $inc: { usageCount: 1 } });
+  if (totals.appliedCoupon) {
+    await CouponModel.findOneAndUpdate({ code: totals.appliedCoupon.code }, { $inc: { usageCount: 1 } });
   }
 
   await CartModel.findOneAndUpdate({ user: req.user._id }, { items: [], totalAmount: 0, totalItems: 0 });

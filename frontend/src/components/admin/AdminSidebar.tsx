@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { BarChart3, Package, ShoppingBag, Users } from 'lucide-react';
+import { BarChart3, Package, ShoppingBag, Users, TicketPercent } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const links = [
@@ -7,6 +7,7 @@ const links = [
   { to: '/admin/products', label: 'Products', icon: Package },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { to: '/admin/users', label: 'Customers', icon: Users },
+  { to: '/admin/coupons', label: 'Coupons', icon: TicketPercent },
 ];
 
 type AdminSidebarProps = {

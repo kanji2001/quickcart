@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import asyncHandler from 'express-async-handler';
 import { StatusCodes } from 'http-status-codes';
+import mongoose from 'mongoose';
 import { CartModel, ProductModel } from '../models';
 import { successResponse } from '../utils/response';
 import { ApiError } from '../utils/api-error';
@@ -43,7 +44,15 @@ export const addCartItem = asyncHandler(async (req: Request, res: Response) => {
 
   const cart = await getOrCreateCart(req.user._id.toString());
 
-  const existingItem = cart.items.find((item) => item.product.toString() === productId);
+  const productIdString = product._id.toString();
+  const existingItem = cart.items.find((item) => {
+    if (!item.product) return false;
+    if (item.product instanceof mongoose.Types.ObjectId) {
+      return item.product.toString() === productIdString;
+    }
+    // When populated, product is a document
+    return item.product._id?.toString?.() === productIdString;
+  });
   if (existingItem) {
     const newQuantity = existingItem.quantity + quantity;
     if (product.stock < newQuantity) {

@@ -15,7 +15,7 @@ import { LoadingState } from '@/components/shared/LoadingState';
 import { useProductDetail } from '@/hooks/products/use-product-detail';
 import { useCartStore } from '@/stores/cart-store';
 import { useAuthStore, selectIsAuthenticated } from '@/stores/auth-store';
-import { useAddCartItemMutation } from '@/hooks/cart/use-cart';
+import { useAddCartItemMutation, useCartQuery, useUpdateCartItemMutation } from '@/hooks/cart/use-cart';
 import { toast } from 'sonner';
 import { productsApi } from '@/api/products';
 import { formatCurrency } from '@/lib/utils';
@@ -35,9 +35,11 @@ export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const { toggleCart } = useCartStore();
+  const { openCart } = useCartStore();
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
   const addToCartMutation = useAddCartItemMutation();
+  const updateCartItemMutation = useUpdateCartItemMutation();
+  const { data: cart } = useCartQuery();
 
   const productQuery = useProductDetail(id ?? '');
 
@@ -52,6 +54,10 @@ export default function ProductDetail() {
   });
 
   const product = productQuery.data;
+  const cartItem = useMemo(() => {
+    if (!cart || !product) return undefined;
+    return cart.items.find((item) => item.product._id === product._id);
+  }, [cart, product]);
 
   const discountPercentage = useMemo(() => {
     if (!product?.discountPrice || product.price <= 0) return 0;
@@ -75,23 +81,45 @@ export default function ProductDetail() {
       return;
     }
 
-    const productId = product._id ?? product.slug;
+    const productId = product._id;
+    if (cartItem) {
+      const nextQuantity = cartItem.quantity + quantity;
+      updateCartItemMutation.mutate(
+        { itemId: cartItem._id, quantity: nextQuantity },
+        {
+          onSuccess: () => {
+            toast.success('Cart updated', {
+              description: `${product.name} quantity increased to ${nextQuantity}.`,
+              action: {
+                label: 'View Cart',
+                onClick: openCart,
+              },
+            });
+          },
+          onError: (error) => {
+            const description = error instanceof Error ? error.message : 'Please try again.';
+            toast.error('Unable to update cart', { description });
+          },
+        },
+      );
+      return;
+    }
+
     addToCartMutation.mutate(
       { productId, quantity },
       {
         onSuccess: () => {
           toast.success('Added to cart!', {
             description: `${product.name} (×${quantity}) added to your cart.`,
-            action: {
-              label: 'View Cart',
-              onClick: toggleCart,
-            },
+              action: {
+                label: 'View Cart',
+                onClick: openCart,
+              },
           });
         },
-        onError: () => {
-          toast.error('Unable to add to cart', {
-            description: 'Please try again.',
-          });
+        onError: (error) => {
+          const description = error instanceof Error ? error.message : 'Please try again.';
+          toast.error('Unable to add to cart', { description });
         },
       },
     );
@@ -120,6 +148,15 @@ export default function ProductDetail() {
   const features = product.features ?? [];
   const relatedProducts = relatedQuery.data ?? [];
   const stock = product.stock ?? 0;
+  const remainingStock = stock > 0 ? Math.max(0, stock - (cartItem?.quantity ?? 0)) : stock;
+  const addMutationPending = addToCartMutation.isPending || updateCartItemMutation.isPending;
+  const canAddMore = stock === 0 ? false : cartItem ? remainingStock > 0 : true;
+  const canIncreaseQuantity =
+    stock > 0
+      ? cartItem
+        ? remainingStock > 0 && quantity < remainingStock
+        : quantity < stock
+      : false;
 
   return (
     <div className="min-h-screen py-8">
@@ -207,6 +244,22 @@ export default function ProductDetail() {
             </div>
 
             <div className="space-y-4">
+              {cartItem ? (
+                <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                  <div className="font-medium text-foreground">
+                    Already in your cart: <span className="font-semibold">{cartItem.quantity}</span>
+                  </div>
+                  {stock > 0 ? (
+                    remainingStock > 0 ? (
+                      <p>You can add up to {remainingStock} more item{remainingStock === 1 ? '' : 's'}.</p>
+                    ) : (
+                      <p>You&apos;ve reached the maximum available quantity.</p>
+                    )
+                  ) : (
+                    <p>This product is currently unavailable.</p>
+                  )}
+                </div>
+              ) : null}
               <div className="flex items-center gap-4">
                 <div className="flex items-center border rounded-lg">
                   <Button variant="ghost" size="icon" onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}>
@@ -216,22 +269,42 @@ export default function ProductDetail() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setQuantity((prev) => Math.min(stock || prev + 1, prev + 1))}
-                    disabled={stock > 0 ? quantity >= stock : false}
+                    onClick={() =>
+                      setQuantity((prev) => {
+                        if (stock <= 0) return prev;
+                        const max = cartItem ? Math.max(1, remainingStock) : stock;
+                        return Math.min(max, prev + 1);
+                      })
+                    }
+                    disabled={!canIncreaseQuantity}
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-wrap">
                 <Button
                   onClick={handleAddToCart}
-                  disabled={stock === 0 || addToCartMutation.isPending}
-                  className="flex-1 gradient-primary"
+                  disabled={stock === 0 || addMutationPending || (cartItem ? !canAddMore : false)}
+                  className="flex-1 min-w-[12rem] gradient-primary"
                   size="lg"
                 >
                   <ShoppingCart className="w-5 h-5 mr-2" />
-                  {addToCartMutation.isPending ? 'Adding...' : 'Add to Cart'}
+                  {addMutationPending
+                    ? 'Updating...'
+                    : cartItem
+                      ? canAddMore
+                        ? 'Add More'
+                        : 'Max Added'
+                      : 'Add to Cart'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => openCart()}
+                  className="flex-1 min-w-[12rem]"
+                >
+                  View Cart
                 </Button>
                 <Button variant="outline" size="lg" onClick={() => toast.info('Added to wishlist')}>
                   <Heart className="w-5 h-5" />

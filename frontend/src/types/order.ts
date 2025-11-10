@@ -1,7 +1,5 @@
-import { Types } from 'mongoose';
-
 type OrderItem = {
-  product: Types.ObjectId;
+  product: string;
   productName: string;
   productImage?: string;
   price: number;
@@ -26,6 +24,15 @@ export type Order = {
   discountAmount: number;
   totalAmount: number;
   couponCode?: string;
+  appliedCoupon?: {
+    code: string;
+    description?: string;
+    discountType: 'percent' | 'flat';
+    discountValue: number;
+    minCartValue: number;
+    maxDiscount?: number;
+    discountAmount: number;
+  };
   orderNotes?: string;
   createdAt?: string;
   statusHistory?: Array<{ status: OrderStatus; date: string; note?: string }>;

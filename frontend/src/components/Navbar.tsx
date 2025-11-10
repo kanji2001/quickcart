@@ -20,7 +20,7 @@ import { useAuthStore, selectAuthUser, selectIsAuthenticated } from '@/stores/au
 import { useLogoutMutation } from '@/hooks/auth/use-logout';
 
 const DesktopLinks = () => (
-  <div className="hidden md:flex items-center space-x-8">
+  <div className="hidden lg:flex items-center space-x-8">
     <Link to="/" className="text-sm font-medium transition-colors hover:text-primary">
       Home
     </Link>
@@ -107,7 +107,7 @@ const MobileMenu = ({ isOpen, onClose, isAuthenticated }: MobileMenuProps) => {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          className="md:hidden border-t"
+          className="lg:hidden border-t"
         >
           <div className="container mx-auto px-4 py-4 space-y-2">
             <Link to="/" className="block py-2 text-sm font-medium" onClick={onClose}>
@@ -200,7 +200,7 @@ export function Navbar() {
 
           <DesktopLinks />
 
-          <form className="hidden lg:flex items-center flex-1 max-w-md mx-8" onSubmit={handleSearchSubmit}>
+          <form className="hidden xl:flex items-center flex-1 max-w-md mx-8" onSubmit={handleSearchSubmit}>
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -239,18 +239,18 @@ export function Navbar() {
               </Button>
             )}
             {isAuthenticated && user?.role === 'admin' ? (
-              <Button asChild variant="outline" size="sm" className="hidden md:flex">
+              <Button asChild variant="outline" size="sm" className="hidden lg:flex">
                 <Link to="/admin">Admin</Link>
               </Button>
             ) : null}
 
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen((prev) => !prev)}>
+            <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen((prev) => !prev)}>
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
           </div>
         </div>
 
-        <div className="lg:hidden pb-4">
+        <div className="xl:hidden pb-4">
           <form className="relative" onSubmit={handleSearchSubmit}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input

@@ -74,6 +74,33 @@ export type Product = {
   discountPercent?: number;
 };
 
+export type CouponDiscountType = 'percent' | 'flat';
+
+export type Coupon = {
+  _id: string;
+  code: string;
+  description?: string;
+  discountType: CouponDiscountType;
+  discountValue: number;
+  minCartValue: number;
+  maxDiscount?: number;
+  startDate: string;
+  expiryDate: string;
+  isActive: boolean;
+  usageLimit?: number;
+  usageCount: number;
+  perUserLimit?: number;
+  applicableCategories: string[];
+  applicableProducts: string[];
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type CouponWithEstimate = Coupon & {
+  estimatedDiscount?: number;
+  estimatedPayable?: number;
+};
+
 export type PaginatedResponse<T> = {
   items: T[];
   pagination: {
@@ -156,6 +183,15 @@ export type Order = {
   discountAmount: number;
   totalAmount: number;
   couponCode?: string;
+  appliedCoupon?: {
+    code: string;
+    description?: string;
+    discountType: CouponDiscountType;
+    discountValue: number;
+    minCartValue: number;
+    maxDiscount?: number;
+    discountAmount: number;
+  };
   createdAt: string;
   statusHistory: Array<{
     status: Order['orderStatus'];

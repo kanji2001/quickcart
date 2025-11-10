@@ -38,6 +38,15 @@ export interface Order {
   discountAmount: number;
   totalAmount: number;
   couponCode?: string;
+  appliedCoupon?: {
+    code: string;
+    description?: string;
+    discountType: 'percent' | 'flat';
+    discountValue: number;
+    minCartValue: number;
+    maxDiscount?: number;
+    discountAmount: number;
+  };
   orderNotes?: string;
   trackingNumber?: string;
   shippedAt?: Date;

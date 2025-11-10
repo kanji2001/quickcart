@@ -54,8 +54,10 @@ export const OrderCard = ({ order, onCancel, isCancelling }: OrderCardProps) => 
             <span>{formatCurrency(order.taxAmount)}</span>
           </div>
           {order.discountAmount > 0 ? (
-            <div className="flex justify-between text-success">
-              <span>Discount</span>
+            <div className="flex justify-between text-emerald-600">
+              <span>
+                Discount{order.appliedCoupon?.code ? ` (${order.appliedCoupon.code})` : ''}
+              </span>
               <span>-{formatCurrency(order.discountAmount)}</span>
             </div>
           ) : null}
@@ -64,6 +66,16 @@ export const OrderCard = ({ order, onCancel, isCancelling }: OrderCardProps) => 
             <span>{formatCurrency(order.totalAmount)}</span>
           </div>
         </div>
+
+        {order.appliedCoupon?.code ? (
+          <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+            <p className="font-semibold text-sm text-foreground">
+              Coupon {order.appliedCoupon.code}{' '}
+              <span className="text-xs text-muted-foreground">({order.appliedCoupon.discountType})</span>
+            </p>
+            {order.appliedCoupon.description ? <p>{order.appliedCoupon.description}</p> : null}
+          </div>
+        ) : null}
 
         {order.orderStatus === 'pending' || order.orderStatus === 'processing' ? (
           <Button
@@ -79,4 +91,5 @@ export const OrderCard = ({ order, onCancel, isCancelling }: OrderCardProps) => 
     </Card>
   );
 };
+
 

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import type { Product } from '@/types/product';
 import { useCartStore } from '@/stores/cart-store';
-import { useAddCartItemMutation } from '@/hooks/cart/use-cart';
+import { useAddCartItemMutation, useCartQuery } from '@/hooks/cart/use-cart';
 import { formatCurrency } from '@/lib/utils';
 
 type ProductCardProps = {
@@ -20,15 +20,42 @@ const getDiscountPercent = (product: Product) => {
 };
 
 export function ProductCard({ product, index = 0 }: ProductCardProps) {
-  const { toggleCart } = useCartStore();
+  const { openCart } = useCartStore();
   const addToCartMutation = useAddCartItemMutation();
+  const { data: cart } = useCartQuery();
 
   const discountPercentage = getDiscountPercent(product);
   const productImage = product.thumbnail?.url ?? product.images?.[0]?.url ?? '/placeholder.svg';
-  const productId = product._id ?? product.slug;
+  const productId = product._id;
+  const productSlug = product.slug ?? product._id;
+  const existingCartItem = cart?.items?.find((item) => item.product._id === productId);
+  const isInCart = Boolean(existingCartItem);
 
   const handleAddToCart = (event: React.MouseEvent) => {
     event.preventDefault();
+    if (isInCart) {
+      addToCartMutation.mutate(
+        { productId, quantity: 1 },
+        {
+          onSuccess: () => {
+            toast.success('Cart updated', {
+              description: `${product.name} quantity increased.`,
+              action: {
+                label: 'View Cart',
+                onClick: openCart,
+              },
+            });
+          },
+          onError: () => {
+            toast.error('Unable to update cart', {
+              description: 'Please try again later.',
+            });
+          },
+        },
+      );
+      return;
+    }
+
     addToCartMutation.mutate(
       { productId, quantity: 1 },
       {
@@ -37,7 +64,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
             description: `${product.name} has been added to your cart.`,
             action: {
               label: 'View Cart',
-              onClick: toggleCart,
+              onClick: openCart,
             },
           });
         },
@@ -58,7 +85,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
       whileHover={{ y: -8 }}
       className="group"
     >
-      <Link to={`/products/${product.slug ?? productId}`}>
+      <Link to={`/products/${productSlug}`}>
         <div className="bg-card rounded-xl shadow-card hover:shadow-lg transition-all duration-300 overflow-hidden border">
           <div className="relative aspect-square overflow-hidden bg-muted">
             <img
@@ -70,6 +97,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
             <div className="absolute top-3 left-3 flex flex-col gap-2">
               {product.isNew && <Badge className="gradient-primary border-0">New</Badge>}
               {discountPercentage > 0 && <Badge variant="destructive">-{discountPercentage}%</Badge>}
+              {isInCart && <Badge variant="secondary">In Cart</Badge>}
             </div>
             <Button
               size="icon"
@@ -83,10 +111,40 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
               <Heart className="w-4 h-4" />
             </Button>
             <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-              <Button onClick={handleAddToCart} className="w-full gradient-primary" size="sm">
-                <ShoppingCart className="w-4 h-4 mr-2" />
-                Add to Cart
-              </Button>
+              {isInCart ? (
+                <div className="space-y-2">
+                  <Button
+                    onClick={handleAddToCart}
+                    className="w-full gradient-primary"
+                    size="sm"
+                    disabled={addToCartMutation.isPending}
+                  >
+                    <ShoppingCart className="w-4 h-4 mr-2" />
+                    {addToCartMutation.isPending ? 'Updating...' : 'Add One More'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      openCart();
+                    }}
+                  >
+                    View Cart
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  onClick={handleAddToCart}
+                  className="w-full gradient-primary"
+                  size="sm"
+                  disabled={addToCartMutation.isPending}
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  {addToCartMutation.isPending ? 'Adding...' : 'Add to Cart'}
+                </Button>
+              )}
             </div>
           </div>
 

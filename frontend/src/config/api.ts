@@ -40,7 +40,9 @@ export const API_ROUTES = {
   coupons: {
     root: '/coupons',
     validate: '/coupons/validate',
+    available: '/coupons/available',
     byId: (id: string) => `/coupons/${id}`,
+    toggle: (id: string) => `/coupons/${id}/toggle`,
   },
   user: {
     profile: '/user/profile',

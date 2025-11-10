@@ -1,25 +1,29 @@
 import { Document, Model, Types } from 'mongoose';
 
-export type DiscountType = 'percentage' | 'fixed';
+export type DiscountType = 'percent' | 'flat';
 
 export interface Coupon {
   code: string;
   description?: string;
   discountType: DiscountType;
   discountValue: number;
-  minPurchaseAmount: number;
-  maxDiscountAmount?: number;
+  minCartValue: number;
+  maxDiscount?: number;
+  startDate: Date;
+  expiryDate: Date;
+  isActive: boolean;
   usageLimit?: number;
   usageCount: number;
-  userUsageLimit?: number;
-  validFrom: Date;
-  validUntil: Date;
-  isActive: boolean;
+  perUserLimit?: number;
   applicableCategories: Types.ObjectId[];
   applicableProducts: Types.ObjectId[];
+  createdAt?: Date;
+  updatedAt?: Date;
+  // Legacy field support
+  userUsageLimit?: number;
 }
 
-export type CouponDocument = Coupon & Document;
+export interface CouponDocument extends Coupon, Document {}
 
 export type CouponModel = Model<CouponDocument>;
 
