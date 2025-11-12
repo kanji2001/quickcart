@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 
-export const getHealthStatus = (req: Request, res: Response) => {
-  return res.status(200).json({
+export const getHealthStatus = (_req: Request, res: Response) => {
+  res.status(200).json({
     success: true,
     message: 'QuickCart API is running',
     data: {

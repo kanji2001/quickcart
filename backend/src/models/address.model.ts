@@ -1,13 +1,15 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, Types } from 'mongoose';
 import type { Address } from '../types/common';
 
-export interface AddressDocument extends Address, mongoose.Document {
-  user: mongoose.Types.ObjectId;
+interface AddressEntity extends Address {
+  user: Types.ObjectId;
 }
 
-export type AddressModel = mongoose.Model<AddressDocument>;
+type AddressDocument = mongoose.HydratedDocument<AddressEntity>;
 
-const addressSchema = new Schema<AddressDocument, AddressModel>(
+type AddressModelType = mongoose.Model<AddressEntity>;
+
+const addressSchema = new Schema<AddressEntity, AddressModelType>(
   {
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     fullName: { type: String, required: true, trim: true },
@@ -27,6 +29,5 @@ const addressSchema = new Schema<AddressDocument, AddressModel>(
 addressSchema.index({ user: 1, isDefault: 1 });
 
 export const AddressModel =
-  (mongoose.models.Address as AddressModel) ||
-  mongoose.model<AddressDocument, AddressModel>('Address', addressSchema);
+  (mongoose.models.Address as AddressModelType) || mongoose.model<AddressEntity, AddressModelType>('Address', addressSchema);
 

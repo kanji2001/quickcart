@@ -65,15 +65,15 @@ const couponSeed: Coupon[] = [
   {
     code: 'WELCOME10',
     description: 'Flat 10% off on first purchase',
-    discountType: 'percentage',
+    discountType: 'percent',
     discountValue: 10,
-    minPurchaseAmount: 500,
-    maxDiscountAmount: 500,
+    minCartValue: 500,
+    maxDiscount: 500,
     usageLimit: 500,
     usageCount: 0,
-    userUsageLimit: 1,
-    validFrom: new Date(),
-    validUntil: new Date(Date.now() + 1000 * 60 * 60 * 24 * 90),
+    perUserLimit: 1,
+    startDate: new Date(),
+    expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 90),
     isActive: true,
     applicableCategories: [],
     applicableProducts: [],
@@ -81,15 +81,15 @@ const couponSeed: Coupon[] = [
   {
     code: 'FREESHIP',
     description: 'Free shipping on orders above ₹999',
-    discountType: 'fixed',
+    discountType: 'flat',
     discountValue: 100,
-    minPurchaseAmount: 999,
-    maxDiscountAmount: 100,
+    minCartValue: 999,
+    maxDiscount: 100,
     usageLimit: 1000,
     usageCount: 0,
-    userUsageLimit: 5,
-    validFrom: new Date(),
-    validUntil: new Date(Date.now() + 1000 * 60 * 60 * 24 * 180),
+    perUserLimit: 5,
+    startDate: new Date(),
+    expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 180),
     isActive: true,
     applicableCategories: [],
     applicableProducts: [],
@@ -97,15 +97,15 @@ const couponSeed: Coupon[] = [
   {
     code: 'FESTIVE20',
     description: 'Festive special 20% off upto ₹1000',
-    discountType: 'percentage',
+    discountType: 'percent',
     discountValue: 20,
-    minPurchaseAmount: 1500,
-    maxDiscountAmount: 1000,
+    minCartValue: 1500,
+    maxDiscount: 1000,
     usageLimit: 300,
     usageCount: 0,
-    userUsageLimit: 2,
-    validFrom: new Date(),
-    validUntil: new Date(Date.now() + 1000 * 60 * 60 * 24 * 45),
+    perUserLimit: 2,
+    startDate: new Date(),
+    expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 45),
     isActive: true,
     applicableCategories: [],
     applicableProducts: [],
@@ -439,7 +439,9 @@ const seed = async () => {
   await CouponModel.deleteMany({});
 
   const categoryDocs = await CategoryModel.insertMany(categoriesSeed.map((category) => ({ ...category })));
-  const categoryIdBySlug = new Map(categoryDocs.map((category) => [category.slug, category._id]));
+  const categoryIdBySlug = new Map<string, mongoose.Types.ObjectId>(
+    categoryDocs.map((category) => [category.slug, category._id]),
+  );
 
   const products = generateProducts(categoryIdBySlug);
   await ProductModel.insertMany(products);

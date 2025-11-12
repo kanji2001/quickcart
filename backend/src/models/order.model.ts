@@ -1,6 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 import type { Address } from '../types/common';
-import type { OrderDocument, OrderModel, OrderStatus } from '../types/order';
+import type { Order, OrderDocument, OrderMethods, OrderModelType, OrderStatus } from '../types/order';
 
 const addressSchema = new Schema<Address>(
   {
@@ -49,7 +49,7 @@ const paymentDetailsSchema = new Schema(
   { _id: false },
 );
 
-const orderSchema = new Schema<OrderDocument, OrderModel>(
+const orderSchema = new Schema<Order, OrderModelType, OrderMethods>(
   {
     orderNumber: { type: String, unique: true, index: true },
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -107,7 +107,7 @@ orderSchema.pre<OrderDocument>('save', function assignOrderNumber(next) {
   next();
 });
 
-orderSchema.methods.markPaid = function markPaid(details) {
+orderSchema.methods.markPaid = function markPaid(details: Order['paymentDetails']) {
   this.paymentStatus = 'completed';
   this.paymentDetails = {
     ...this.paymentDetails,
@@ -140,5 +140,5 @@ orderSchema.index({ orderStatus: 1 });
 orderSchema.index({ createdAt: -1 });
 
 export const OrderModel =
-  (mongoose.models.Order as OrderModel) || mongoose.model<OrderDocument, OrderModel>('Order', orderSchema);
+  (mongoose.models.Order as OrderModelType) || mongoose.model<Order, OrderModelType>('Order', orderSchema);
 

@@ -1,9 +1,10 @@
-import { Document, Model, Types } from 'mongoose';
+import { HydratedDocument, Model, Types } from 'mongoose';
 import { Dimensions, ImageAsset } from './common';
 
 export type ProductFeature = string;
 
 export interface Product {
+  _id?: Types.ObjectId;
   name: string;
   slug: string;
   description: string;
@@ -30,11 +31,15 @@ export interface Product {
   dimensions?: Dimensions | null;
 }
 
-export interface ProductDocument extends Product, Document {
+export interface ProductMethods {
   discountPercent?: number;
 }
 
-export interface ProductModel extends Model<ProductDocument> {
+export interface ProductModelStatics {
   getFeatured(limit?: number): Promise<ProductDocument[]>;
 }
+
+export type ProductDocument = HydratedDocument<Product, ProductMethods>;
+
+export type ProductModelType = Model<Product, {}, ProductMethods> & ProductModelStatics;
 

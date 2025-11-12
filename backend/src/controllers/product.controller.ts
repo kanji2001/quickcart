@@ -8,7 +8,9 @@ import { ApiError } from '../utils/api-error';
 import { getPagination } from '../utils/pagination';
 import { uploadToCloudinary } from '../services/cloudinary.service';
 
-const buildProductFilters = (query: Request['query']) => {
+type ProductQuery = Record<string, unknown>;
+
+const buildProductFilters = (query: ProductQuery) => {
   const filters: Record<string, unknown> = {
     isActive: true,
   };
@@ -22,19 +24,19 @@ const buildProductFilters = (query: Request['query']) => {
   }
 
   if (query.brand) {
-    filters.brand = query.brand;
+    filters.brand = String(query.brand);
   }
 
   if (query.isFeatured) {
-    filters.isFeatured = query.isFeatured === 'true';
+    filters.isFeatured = String(query.isFeatured) === 'true';
   }
 
   if (query.isNew) {
-    filters.isNew = query.isNew === 'true';
+    filters.isNew = String(query.isNew) === 'true';
   }
 
   if (query.isTrending) {
-    filters.isTrending = query.isTrending === 'true';
+    filters.isTrending = String(query.isTrending) === 'true';
   }
 
   if (query.minPrice || query.maxPrice) {
@@ -53,16 +55,18 @@ const buildProductFilters = (query: Request['query']) => {
   }
 
   if (query.tags) {
-    const tags = Array.isArray(query.tags) ? query.tags : String(query.tags).split(',');
+    const tags = Array.isArray(query.tags)
+      ? query.tags.map((tag) => String(tag))
+      : String(query.tags).split(',');
     filters.tags = { $in: tags.map((tag) => tag.trim()) };
   }
 
   return filters;
 };
 
-const getSortingOption = (sort?: string | string[]) => {
+const getSortingOption = (sort?: unknown): Record<string, 1 | -1> => {
   if (!sort) return { createdAt: -1 };
-  const sortValue = Array.isArray(sort) ? sort[0] : sort;
+  const sortValue = Array.isArray(sort) ? String(sort[0]) : String(sort);
   switch (sortValue) {
     case 'price':
       return { price: 1 };
@@ -80,7 +84,7 @@ const getSortingOption = (sort?: string | string[]) => {
 };
 
 export const listProducts = asyncHandler(async (req: Request, res: Response) => {
-  const filters = buildProductFilters(req.query);
+  const filters = buildProductFilters(req.query as ProductQuery);
   const { page, limit, skip } = getPagination({ page: String(req.query.page ?? '1'), limit: String(req.query.limit ?? '10') });
   const sort = getSortingOption(req.query.sort);
 

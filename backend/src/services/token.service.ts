@@ -1,4 +1,4 @@
-import jwt, { JwtPayload } from 'jsonwebtoken';
+import jwt, { JwtPayload, SignOptions, Secret } from 'jsonwebtoken';
 import { envConfig } from '../config/env';
 import { ApiError } from '../utils/api-error';
 import { StatusCodes } from 'http-status-codes';
@@ -14,8 +14,8 @@ type RefreshTokenPayload = AccessTokenPayload & {
 
 export const tokenService = {
   generateAccessToken(payload: AccessTokenPayload) {
-    return jwt.sign(payload, envConfig.jwt.accessSecret, {
-      expiresIn: envConfig.jwt.accessExpire,
+    return jwt.sign(payload, envConfig.jwt.accessSecret as Secret, {
+      expiresIn: envConfig.jwt.accessExpire as SignOptions['expiresIn'],
     });
   },
 
@@ -25,16 +25,16 @@ export const tokenService = {
         ...payload,
         tokenType: 'refresh',
       } satisfies RefreshTokenPayload,
-      envConfig.jwt.refreshSecret,
+      envConfig.jwt.refreshSecret as Secret,
       {
-        expiresIn: envConfig.jwt.refreshExpire,
+        expiresIn: envConfig.jwt.refreshExpire as SignOptions['expiresIn'],
       },
     );
   },
 
   verifyAccessToken(token: string) {
     try {
-      return jwt.verify(token, envConfig.jwt.accessSecret) as JwtPayload & AccessTokenPayload;
+      return jwt.verify(token, envConfig.jwt.accessSecret as Secret) as JwtPayload & AccessTokenPayload;
     } catch (error) {
       throw new ApiError({
         message: 'Invalid or expired access token',
@@ -45,7 +45,7 @@ export const tokenService = {
 
   verifyRefreshToken(token: string) {
     try {
-      const payload = jwt.verify(token, envConfig.jwt.refreshSecret) as JwtPayload & RefreshTokenPayload;
+      const payload = jwt.verify(token, envConfig.jwt.refreshSecret as Secret) as JwtPayload & RefreshTokenPayload;
       if (payload.tokenType !== 'refresh') {
         throw new ApiError({ message: 'Invalid refresh token', statusCode: StatusCodes.UNAUTHORIZED });
       }

@@ -1,7 +1,8 @@
-import { Document, Model, Types } from 'mongoose';
+import { HydratedDocument, Model, Types } from 'mongoose';
 import { ImageAsset } from './common';
 
 export interface Category {
+  _id?: Types.ObjectId;
   name: string;
   slug: string;
   description?: string;
@@ -10,7 +11,7 @@ export interface Category {
   isActive: boolean;
 }
 
-export type CategoryDocument = Category & Document;
+export type CategoryDocument = HydratedDocument<Category>;
 
-export type CategoryModel = Model<CategoryDocument>;
+export type CategoryModelType = Model<Category>;
 

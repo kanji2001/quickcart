@@ -1,7 +1,8 @@
-import { Document, Model, Types } from 'mongoose';
+import { HydratedDocument, Model, Types } from 'mongoose';
 import { ImageAsset } from './common';
 
 export interface Review {
+  _id?: Types.ObjectId;
   product: Types.ObjectId;
   user: Types.ObjectId;
   order?: Types.ObjectId;
@@ -12,7 +13,7 @@ export interface Review {
   helpful: number;
 }
 
-export type ReviewDocument = Review & Document;
+export type ReviewDocument = HydratedDocument<Review>;
 
-export type ReviewModel = Model<ReviewDocument>;
+export type ReviewModelType = Model<Review>;
 

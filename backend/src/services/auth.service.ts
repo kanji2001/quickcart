@@ -155,10 +155,8 @@ export const authService = {
   },
 
   sanitizeUser(user: User) {
-    const { password, refreshToken, resetPasswordToken, resetPasswordExpire, verificationToken, ...rest } = user as Record<
-      string,
-      unknown
-    >;
+    const plainUser = user as unknown as Record<string, unknown>;
+    const { password, refreshToken, resetPasswordToken, resetPasswordExpire, verificationToken, ...rest } = plainUser;
     return rest;
   },
 };

@@ -1,7 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
-import type { ReviewDocument, ReviewModel } from '../types/review';
+import type { Review, ReviewDocument, ReviewModelType } from '../types/review';
 
-const reviewSchema = new Schema<ReviewDocument, ReviewModel>(
+const reviewSchema = new Schema<Review, ReviewModelType>(
   {
     product: { type: Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -10,11 +10,11 @@ const reviewSchema = new Schema<ReviewDocument, ReviewModel>(
     comment: { type: String, required: true, minlength: 10 },
     images: {
       type: [
-      {
-        publicId: { type: String },
-        url: { type: String },
-      },
-    ],
+        {
+          publicId: { type: String },
+          url: { type: String },
+        },
+      ],
       default: [],
     },
     isVerifiedPurchase: { type: Boolean, default: false },
@@ -26,5 +26,5 @@ const reviewSchema = new Schema<ReviewDocument, ReviewModel>(
 reviewSchema.index({ product: 1, user: 1 }, { unique: true });
 
 export const ReviewModel =
-  (mongoose.models.Review as ReviewModel) || mongoose.model<ReviewDocument, ReviewModel>('Review', reviewSchema);
+  (mongoose.models.Review as ReviewModelType) || mongoose.model<Review, ReviewModelType>('Review', reviewSchema);
 

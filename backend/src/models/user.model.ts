@@ -1,9 +1,9 @@
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions, Secret } from 'jsonwebtoken';
 import mongoose, { Schema } from 'mongoose';
 import { envConfig } from '../config/env';
 import type { Address } from '../types/common';
-import type { UserDocument, UserModel } from '../types/user';
+import type { User, UserDocument, UserMethods, UserModelType } from '../types/user';
 
 const addressSchema = new Schema<Address>(
   {
@@ -21,7 +21,7 @@ const addressSchema = new Schema<Address>(
   { _id: true },
 );
 
-const userSchema = new Schema<UserDocument, UserModel>(
+const userSchema = new Schema<User, UserModelType, UserMethods>(
   {
     name: { type: String, required: true, trim: true },
     email: {
@@ -51,7 +51,7 @@ const userSchema = new Schema<UserDocument, UserModel>(
     timestamps: true,
     toJSON: {
       virtuals: true,
-      transform: (_, ret) => {
+      transform: (_, ret: Record<string, unknown>) => {
         delete ret.password;
         delete ret.__v;
         delete ret.refreshToken;
@@ -84,8 +84,8 @@ userSchema.methods.generateAuthToken = function generateAuthToken() {
       sub: this._id.toString(),
       role: this.role,
     },
-    envConfig.jwt.accessSecret,
-    { expiresIn: envConfig.jwt.accessExpire },
+    envConfig.jwt.accessSecret as Secret,
+    { expiresIn: envConfig.jwt.accessExpire as SignOptions['expiresIn'] },
   );
 };
 
@@ -96,13 +96,14 @@ userSchema.methods.generateRefreshToken = function generateRefreshToken() {
       role: this.role,
       tokenType: 'refresh',
     },
-    envConfig.jwt.refreshSecret,
-    { expiresIn: envConfig.jwt.refreshExpire },
+    envConfig.jwt.refreshSecret as Secret,
+    { expiresIn: envConfig.jwt.refreshExpire as SignOptions['expiresIn'] },
   );
 
   this.refreshToken = token;
   return token;
 };
 
-export const UserModel = (mongoose.models.User as UserModel) || mongoose.model<UserDocument, UserModel>('User', userSchema);
+export const UserModel =
+  (mongoose.models.User as UserModelType) || mongoose.model<User, UserModelType>('User', userSchema);
 

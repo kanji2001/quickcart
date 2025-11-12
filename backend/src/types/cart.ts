@@ -1,4 +1,4 @@
-import { Document, Model, Types } from 'mongoose';
+import { HydratedDocument, Model, Types } from 'mongoose';
 
 export interface CartItem {
   product: Types.ObjectId;
@@ -7,16 +7,19 @@ export interface CartItem {
 }
 
 export interface Cart {
+  _id?: Types.ObjectId;
   user: Types.ObjectId;
   items: CartItem[];
   totalAmount: number;
   totalItems: number;
 }
 
-export interface CartDocument extends Cart, Document {
+export interface CartMethods {
   calculateTotals(): void;
   calculateTotal(): void;
 }
 
-export type CartModel = Model<CartDocument>;
+export type CartDocument = HydratedDocument<Cart, CartMethods>;
+
+export type CartModelType = Model<Cart, {}, CartMethods>;
 

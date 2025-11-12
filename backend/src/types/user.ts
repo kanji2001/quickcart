@@ -1,9 +1,10 @@
-import { Document, Model } from 'mongoose';
+import { HydratedDocument, Model, Types } from 'mongoose';
 import { Address, ImageAsset } from './common';
 
 export type UserRole = 'user' | 'admin';
 
 export interface User {
+  _id?: Types.ObjectId;
   name: string;
   email: string;
   password: string;
@@ -19,11 +20,13 @@ export interface User {
   isBlocked: boolean;
 }
 
-export interface UserDocument extends User, Document {
+export interface UserMethods {
   comparePassword(candidatePassword: string): Promise<boolean>;
   generateAuthToken(): string;
   generateRefreshToken(): string;
 }
 
-export type UserModel = Model<UserDocument>;
+export type UserDocument = HydratedDocument<User, UserMethods>;
+
+export type UserModelType = Model<User, {}, UserMethods>;
 

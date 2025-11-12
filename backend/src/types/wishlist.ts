@@ -1,11 +1,12 @@
-import { Document, Model, Types } from 'mongoose';
+import { HydratedDocument, Model, Types } from 'mongoose';
 
 export interface Wishlist {
+  _id?: Types.ObjectId;
   user: Types.ObjectId;
   products: Types.ObjectId[];
 }
 
-export type WishlistDocument = Wishlist & Document;
+export type WishlistDocument = HydratedDocument<Wishlist>;
 
-export type WishlistModel = Model<WishlistDocument>;
+export type WishlistModelType = Model<Wishlist>;
 

@@ -148,6 +148,7 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
   const normalizedCouponCode = typeof couponCode === 'string' && couponCode.trim().length > 0 ? couponCode.trim() : undefined;
 
   const totals = await calculateOrderTotals(enrichedItems, req.user._id, normalizedCouponCode);
+  const { appliedCoupon, ...totalsWithoutCoupon } = totals;
 
   const order = await OrderModel.create({
     user: req.user._id,
@@ -157,9 +158,9 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
     paymentMethod,
     paymentStatus: paymentMethod === 'cod' ? 'pending' : 'pending',
     orderStatus: 'pending',
-    couponCode: totals.appliedCoupon?.code ?? undefined,
-    appliedCoupon: totals.appliedCoupon,
-    ...totals,
+    couponCode: appliedCoupon?.code ?? undefined,
+    appliedCoupon,
+    ...totalsWithoutCoupon,
   });
 
   await Promise.all(
@@ -170,8 +171,8 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
     ),
   );
 
-  if (totals.appliedCoupon) {
-    await CouponModel.findOneAndUpdate({ code: totals.appliedCoupon.code }, { $inc: { usageCount: 1 } });
+  if (appliedCoupon) {
+    await CouponModel.findOneAndUpdate({ code: appliedCoupon.code }, { $inc: { usageCount: 1 } });
   }
 
   await CartModel.findOneAndUpdate({ user: req.user._id }, { items: [], totalAmount: 0, totalItems: 0 });

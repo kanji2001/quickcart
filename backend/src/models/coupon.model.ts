@@ -1,7 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
-import type { CouponDocument, CouponModel } from '../types/coupon';
+import type { Coupon, CouponDocument, CouponModelType } from '../types/coupon';
 
-const couponSchema = new Schema<CouponDocument, CouponModel>(
+const couponSchema = new Schema<Coupon, CouponModelType>(
   {
     code: { type: String, required: true, unique: true, uppercase: true, trim: true },
     description: { type: String, trim: true },
@@ -24,4 +24,4 @@ const couponSchema = new Schema<CouponDocument, CouponModel>(
 couponSchema.index({ isActive: 1, startDate: 1, expiryDate: 1 });
 
 export const CouponModel =
-  (mongoose.models.Coupon as CouponModel) || mongoose.model<CouponDocument, CouponModel>('Coupon', couponSchema);
+  (mongoose.models.Coupon as CouponModelType) || mongoose.model<Coupon, CouponModelType>('Coupon', couponSchema);

@@ -1,8 +1,9 @@
-import { Document, Model, Types } from 'mongoose';
+import { HydratedDocument, Model, Types } from 'mongoose';
 
 export type DiscountType = 'percent' | 'flat';
 
 export interface Coupon {
+  _id?: Types.ObjectId;
   code: string;
   description?: string;
   discountType: DiscountType;
@@ -23,7 +24,7 @@ export interface Coupon {
   userUsageLimit?: number;
 }
 
-export interface CouponDocument extends Coupon, Document {}
+export type CouponDocument = HydratedDocument<Coupon>;
 
-export type CouponModel = Model<CouponDocument>;
+export type CouponModelType = Model<Coupon>;
 

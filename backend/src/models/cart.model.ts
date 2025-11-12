@@ -1,5 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-import type { CartDocument, CartModel } from '../types/cart';
+import type { Cart, CartDocument, CartMethods, CartModelType } from '../types/cart';
 
 const cartItemSchema = new Schema(
   {
@@ -10,7 +10,7 @@ const cartItemSchema = new Schema(
   { _id: true },
 );
 
-const cartSchema = new Schema<CartDocument, CartModel>(
+const cartSchema = new Schema<Cart, CartModelType, CartMethods>(
   {
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true },
     items: { type: [cartItemSchema], default: [] },
@@ -43,5 +43,6 @@ cartSchema.methods.calculateTotal = function calculateTotal() {
   this.calculateTotals();
 };
 
-export const CartModel = (mongoose.models.Cart as CartModel) || mongoose.model<CartDocument, CartModel>('Cart', cartSchema);
+export const CartModel =
+  (mongoose.models.Cart as CartModelType) || mongoose.model<Cart, CartModelType>('Cart', cartSchema);
 

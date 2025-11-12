@@ -1,7 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
-import type { ProductDocument, ProductModel } from '../types/product';
+import type { Product, ProductDocument, ProductMethods, ProductModelType } from '../types/product';
 
-const productSchema = new Schema<ProductDocument, ProductModel>(
+const productSchema = new Schema<Product, ProductModelType, ProductMethods>(
   {
     name: { type: String, required: true, trim: true },
     slug: { type: String, required: true, unique: true, index: true },
@@ -16,11 +16,11 @@ const productSchema = new Schema<ProductDocument, ProductModel>(
     sold: { type: Number, default: 0 },
     images: {
       type: [
-      {
-        publicId: { type: String, required: true },
-        url: { type: String, required: true },
-      },
-    ],
+        {
+          publicId: { type: String, required: true },
+          url: { type: String, required: true },
+        },
+      ],
       default: [],
     },
     thumbnail: {
@@ -51,7 +51,7 @@ const productSchema = new Schema<ProductDocument, ProductModel>(
   },
 );
 
-productSchema.virtual('discountPercent').get(function calculateDiscount() {
+productSchema.virtual('discountPercent').get(function calculateDiscount(this: ProductDocument) {
   if (!this.discountPrice || this.price <= 0) {
     return 0;
   }
@@ -64,10 +64,10 @@ productSchema.index({ category: 1, price: 1, rating: -1 });
 productSchema.index({ isFeatured: 1 });
 productSchema.index({ isActive: 1 });
 
-productSchema.statics.getFeatured = function getFeatured(limit = 10) {
+productSchema.statics.getFeatured = function getFeatured(this: ProductModelType, limit = 10) {
   return this.find({ isFeatured: true, isActive: true }).limit(limit).sort({ createdAt: -1 });
 };
 
 export const ProductModel =
-  (mongoose.models.Product as ProductModel) || mongoose.model<ProductDocument, ProductModel>('Product', productSchema);
+  (mongoose.models.Product as ProductModelType) || mongoose.model<Product, ProductModelType>('Product', productSchema);
 

@@ -1,7 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
-import type { CategoryDocument, CategoryModel } from '../types/category';
+import type { Category, CategoryDocument, CategoryModelType } from '../types/category';
 
-const categorySchema = new Schema<CategoryDocument, CategoryModel>(
+const categorySchema = new Schema<Category, CategoryModelType>(
   {
     name: { type: String, required: true, unique: true, trim: true },
     slug: { type: String, required: true, unique: true, trim: true },
@@ -19,5 +19,6 @@ const categorySchema = new Schema<CategoryDocument, CategoryModel>(
 categorySchema.index({ isActive: 1 });
 
 export const CategoryModel =
-  (mongoose.models.Category as CategoryModel) || mongoose.model<CategoryDocument, CategoryModel>('Category', categorySchema);
+  (mongoose.models.Category as CategoryModelType) ||
+  mongoose.model<Category, CategoryModelType>('Category', categorySchema);
 

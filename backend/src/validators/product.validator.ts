@@ -41,7 +41,7 @@ const productBodySchema = z.object({
   images: z.array(imageSchema).default([]),
   thumbnail: imageSchema.partial().optional(),
   features: stringOrStringArray.optional(),
-  specifications: z.record(z.any()).default({}),
+  specifications: z.record(z.string(), z.any()).default({}),
   isFeatured: z.coerce.boolean().optional(),
   isNew: z.coerce.boolean().optional(),
   isTrending: z.coerce.boolean().optional(),

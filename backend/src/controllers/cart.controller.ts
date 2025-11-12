@@ -45,13 +45,17 @@ export const addCartItem = asyncHandler(async (req: Request, res: Response) => {
   const cart = await getOrCreateCart(req.user._id.toString());
 
   const productIdString = product._id.toString();
-  const existingItem = cart.items.find((item) => {
-    if (!item.product) return false;
-    if (item.product instanceof mongoose.Types.ObjectId) {
-      return item.product.toString() === productIdString;
+  const existingItem = cart.items.find((item: any) => {
+    const productRef = item.product;
+    if (!productRef) return false;
+    if (productRef instanceof mongoose.Types.ObjectId) {
+      return productRef.toString() === productIdString;
     }
-    // When populated, product is a document
-    return item.product._id?.toString?.() === productIdString;
+    if (typeof productRef === 'object' && productRef !== null && '_id' in productRef) {
+      const idValue = (productRef as { _id?: mongoose.Types.ObjectId })._id;
+      return idValue?.toString() === productIdString;
+    }
+    return false;
   });
   if (existingItem) {
     const newQuantity = existingItem.quantity + quantity;
@@ -87,14 +91,15 @@ export const updateCartItem = asyncHandler(async (req: Request, res: Response) =
   const { quantity } = req.body;
 
   const cart = await getOrCreateCart(req.user._id.toString());
-  const item = cart.items.id(itemId);
-
-  if (!item) {
+  const itemIndex = cart.items.findIndex((item: any) => item._id?.toString() === itemId);
+  if (itemIndex === -1) {
     throw new ApiError({ message: 'Cart item not found', statusCode: StatusCodes.NOT_FOUND });
   }
 
+  const item: any = cart.items[itemIndex];
+
   if (quantity <= 0) {
-    item.deleteOne();
+    cart.items.splice(itemIndex, 1);
   } else {
     const product = await ProductModel.findById(item.product);
     if (!product) {
@@ -124,13 +129,12 @@ export const removeCartItem = asyncHandler(async (req: Request, res: Response) =
   const { itemId } = req.params;
 
   const cart = await getOrCreateCart(req.user._id.toString());
-  const item = cart.items.id(itemId);
-
-  if (!item) {
+  const itemIndex = cart.items.findIndex((item: any) => item._id?.toString() === itemId);
+  if (itemIndex === -1) {
     throw new ApiError({ message: 'Cart item not found', statusCode: StatusCodes.NOT_FOUND });
   }
 
-  item.deleteOne();
+  cart.items.splice(itemIndex, 1);
   cart.calculateTotals();
   await cart.save();
 

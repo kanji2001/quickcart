@@ -1,4 +1,4 @@
-import { Document, Model, Types } from 'mongoose';
+import { HydratedDocument, Model, Types } from 'mongoose';
 import { Address, StatusHistoryEntry } from './common';
 
 export type PaymentMethod = 'razorpay' | 'cod';
@@ -22,6 +22,7 @@ export interface PaymentDetails {
 }
 
 export interface Order {
+  _id?: Types.ObjectId;
   orderNumber: string;
   user: Types.ObjectId;
   items: OrderItem[];
@@ -55,10 +56,12 @@ export interface Order {
   cancellationReason?: string;
 }
 
-export interface OrderDocument extends Order, Document {
+export interface OrderMethods {
   markPaid(details: PaymentDetails): void;
   addStatusHistory(status: OrderStatus, note?: string): void;
 }
 
-export type OrderModel = Model<OrderDocument>;
+export type OrderDocument = HydratedDocument<Order, OrderMethods>;
+
+export type OrderModelType = Model<Order, {}, OrderMethods>;
 
