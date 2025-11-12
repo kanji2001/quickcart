@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { Loader2, ShoppingBag, TicketPercent, Sparkles } from 'lucide-react';
+import { Loader2, ShoppingBag, TicketPercent, Sparkles, Minus, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,12 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { LoadingState } from '@/components/shared/LoadingState';
-import { useCartQuery, cartQueryKey } from '@/hooks/cart/use-cart';
+import {
+  useCartQuery,
+  cartQueryKey,
+  useUpdateCartItemMutation,
+  useRemoveCartItemMutation,
+} from '@/hooks/cart/use-cart';
 import { useAuthStore, selectAuthUser, selectIsAuthenticated } from '@/stores/auth-store';
 import { ensureRazorpayLoaded } from '@/lib/razorpay';
 import { paymentApi } from '@/api/payment';
@@ -86,6 +91,8 @@ const Checkout = () => {
   const user = useAuthStore(selectAuthUser);
   const { data: cart, isLoading: isCartLoading, isError: isCartError } = useCartQuery();
   const createOrderMutation = useCreateOrderMutation();
+  const updateCartItemMutation = useUpdateCartItemMutation();
+  const removeCartItemMutation = useRemoveCartItemMutation();
   const [isProcessing, setIsProcessing] = useState(false);
   const addressesQuery = useAddressesQuery({ enabled: isAuthenticated });
   const [selectedAddressId, setSelectedAddressId] = useState<string>('custom');
@@ -762,7 +769,77 @@ const handlePaymentSuccess = async (
                       </div>
                       <div>
                         <p className="font-medium">{item.product.name}</p>
-                        <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-7 w-7"
+                            onClick={() => {
+                              if (item.quantity <= 1) {
+                                removeCartItemMutation.mutate(item._id, {
+                                  onSuccess: () =>
+                                    toast.success('Item removed', {
+                                      description: `${item.product.name} removed from your cart.`,
+                                    }),
+                                  onError: (error) =>
+                                    toast.error('Unable to update cart', {
+                                      description: getErrorMessage(error),
+                                    }),
+                                });
+                              } else {
+                                updateCartItemMutation.mutate(
+                                  { itemId: item._id, quantity: item.quantity - 1 },
+                                  {
+                                    onError: (error) =>
+                                      toast.error('Unable to update cart', {
+                                        description: getErrorMessage(error),
+                                      }),
+                                  },
+                                );
+                              }
+                            }}
+                          >
+                            <Minus className="w-3 h-3" />
+                          </Button>
+                          <span className="text-sm font-medium w-8 text-center">{item.quantity}</span>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="h-7 w-7"
+                            onClick={() =>
+                              updateCartItemMutation.mutate(
+                                { itemId: item._id, quantity: item.quantity + 1 },
+                                {
+                                  onError: (error) =>
+                                    toast.error('Unable to update cart', {
+                                      description: getErrorMessage(error),
+                                    }),
+                                },
+                              )
+                            }
+                          >
+                            <Plus className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 ml-2 text-destructive"
+                            onClick={() =>
+                              removeCartItemMutation.mutate(item._id, {
+                                onSuccess: () =>
+                                  toast.success('Item removed', {
+                                    description: `${item.product.name} removed from your cart.`,
+                                  }),
+                                onError: (error) =>
+                                  toast.error('Unable to update cart', {
+                                    description: getErrorMessage(error),
+                                  }),
+                              })
+                            }
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                     <p className="font-semibold">{formatCurrency(item.price * item.quantity)}</p>

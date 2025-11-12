@@ -18,6 +18,7 @@ import {
 } from '@/hooks/coupons/use-coupons';
 import { CouponFormDialog } from '@/components/admin/CouponFormDialog';
 import { formatCurrency } from '@/lib/utils';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 
 const statusFilters = [
   { label: 'All', value: '' },
@@ -128,6 +129,7 @@ export const AdminCoupons = () => {
   const { data, isLoading, isError, refetch, isFetching } = useCouponsQuery(queryParams);
   const deleteMutation = useDeleteCouponMutation();
   const toggleMutation = useToggleCouponMutation();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
 
@@ -144,8 +146,13 @@ export const AdminCoupons = () => {
     updateSearchParams(searchParams, setSearchParams, { discountType: value || undefined });
   };
 
-  const handleDelete = (coupon: Coupon) => {
-    const confirmed = window.confirm(`Delete coupon ${coupon.code}? This action cannot be undone.`);
+  const handleDelete = async (coupon: Coupon) => {
+    const confirmed = await confirm({
+      title: `Delete coupon ${coupon.code}?`,
+      description: 'This will permanently remove the coupon and its usage history.',
+      confirmText: 'Delete coupon',
+      variant: 'destructive',
+    });
     if (!confirmed) return;
 
     deleteMutation.mutate(coupon._id, {
@@ -154,7 +161,17 @@ export const AdminCoupons = () => {
     });
   };
 
-  const handleToggle = (coupon: Coupon) => {
+  const handleToggle = async (coupon: Coupon) => {
+    const confirmed = await confirm({
+      title: `${coupon.isActive ? 'Disable' : 'Activate'} ${coupon.code}?`,
+      description: coupon.isActive
+        ? 'Customers will no longer be able to apply this coupon at checkout.'
+        : 'The coupon will become available to eligible customers immediately.',
+      confirmText: coupon.isActive ? 'Disable coupon' : 'Activate coupon',
+      variant: coupon.isActive ? 'destructive' : 'default',
+    });
+    if (!confirmed) return;
+
     toggleMutation.mutate(
       { id: coupon._id, isActive: !coupon.isActive },
       {
@@ -185,180 +202,183 @@ export const AdminCoupons = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <Card className="shadow-sm overflow-hidden">
-        <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <CardTitle className="text-base">Coupons</CardTitle>
-          <div className="flex flex-col gap-3 w-full sm:flex-row sm:items-center sm:justify-end">
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(event) => handleSearchChange(event.target.value)}
-                placeholder="Search code or description"
-                className="pl-9"
+    <>
+      {ConfirmDialog}
+      <div className="space-y-4">
+        <Card className="shadow-sm overflow-hidden">
+          <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <CardTitle className="text-base">Coupons</CardTitle>
+            <div className="flex flex-col gap-3 w-full sm:flex-row sm:items-center sm:justify-end">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={searchInput}
+                  onChange={(event) => handleSearchChange(event.target.value)}
+                  placeholder="Search code or description"
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {statusFilters.map((filter) => (
+                  <Button
+                    key={filter.value || 'all-status'}
+                    size="sm"
+                    variant={status === filter.value ? 'default' : 'outline'}
+                    onClick={() => handleStatusChange(filter.value)}
+                  >
+                    {filter.label}
+                  </Button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {discountTypeFilters.map((filter) => (
+                  <Button
+                    key={filter.value || 'all-discount'}
+                    size="sm"
+                    variant={discountType === filter.value ? 'default' : 'outline'}
+                    onClick={() => handleDiscountTypeChange(filter.value)}
+                  >
+                    {filter.label}
+                  </Button>
+                ))}
+              </div>
+              <CouponFormDialog
+                mode="create"
+                trigger={
+                  <Button className="gradient-primary" size="sm">
+                    Create Coupon
+                  </Button>
+                }
+                onSuccess={onFormSuccess}
               />
             </div>
-            <div className="flex flex-wrap gap-2">
-              {statusFilters.map((filter) => (
-                <Button
-                  key={filter.value || 'all-status'}
-                  size="sm"
-                  variant={status === filter.value ? 'default' : 'outline'}
-                  onClick={() => handleStatusChange(filter.value)}
-                >
-                  {filter.label}
-                </Button>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {discountTypeFilters.map((filter) => (
-                <Button
-                  key={filter.value || 'all-discount'}
-                  size="sm"
-                  variant={discountType === filter.value ? 'default' : 'outline'}
-                  onClick={() => handleDiscountTypeChange(filter.value)}
-                >
-                  {filter.label}
-                </Button>
-              ))}
-            </div>
-            <CouponFormDialog
-              mode="create"
-              trigger={
-                <Button className="gradient-primary" size="sm">
-                  Create Coupon
-                </Button>
-              }
-              onSuccess={onFormSuccess}
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table className="w-full">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Coupon</TableHead>
-                  <TableHead>Discount</TableHead>
-                  <TableHead>Min. Cart</TableHead>
-                  <TableHead>Validity</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Usage</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.items.length === 0 ? (
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table className="w-full">
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
-                      No coupons match your filters.
-                    </TableCell>
+                    <TableHead>Coupon</TableHead>
+                    <TableHead>Discount</TableHead>
+                    <TableHead>Min. Cart</TableHead>
+                    <TableHead>Validity</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Usage</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  data.items.map((coupon) => {
-                    const statusMeta = getStatusLabel(coupon);
-                    return (
-                      <TableRow key={coupon._id}>
-                        <TableCell className="whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <Badge className="font-semibold">{coupon.code}</Badge>
-                            <div className="flex flex-col">
-                              <span className="text-sm font-medium">{coupon.description || '—'}</span>
-                              <span className="text-xs text-muted-foreground">
-                                Created {coupon.createdAt ? format(new Date(coupon.createdAt), 'dd MMM yyyy') : '—'}
+                </TableHeader>
+                <TableBody>
+                  {data.items.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                        No coupons match your filters.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    data.items.map((coupon) => {
+                      const statusMeta = getStatusLabel(coupon);
+                      return (
+                        <TableRow key={coupon._id}>
+                          <TableCell className="whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <Badge className="font-semibold">{coupon.code}</Badge>
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium">{coupon.description || '—'}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  Created {coupon.createdAt ? format(new Date(coupon.createdAt), 'dd MMM yyyy') : '—'}
+                                </span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col text-sm">
+                              <span className="font-medium flex items-center gap-1">
+                                {coupon.discountType === 'flat' ? (
+                                  <>
+                                    <Tag className="h-4 w-4 text-primary" />
+                                    {formatCurrency(coupon.discountValue)}
+                                  </>
+                                ) : (
+                                  <>
+                                    <Percent className="h-4 w-4 text-primary" />
+                                    {coupon.discountValue}%
+                                  </>
+                                )}
+                              </span>
+                              {coupon.discountType === 'percent' && coupon.maxDiscount ? (
+                                <span className="text-xs text-muted-foreground">
+                                  Max discount {formatCurrency(coupon.maxDiscount)}
+                                </span>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                          <TableCell>{formatCurrency(coupon.minCartValue)}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-col text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3.5 w-3.5" />
+                                {formatDateRange(coupon.startDate, coupon.expiryDate)}
                               </span>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col text-sm">
-                            <span className="font-medium flex items-center gap-1">
-                              {coupon.discountType === 'flat' ? (
-                                <>
-                                  <Tag className="h-4 w-4 text-primary" />
-                                  {formatCurrency(coupon.discountValue)}
-                                </>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={statusMeta.variant}>{statusMeta.label}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col text-xs">
+                              <span className="font-medium">{coupon.usageCount ?? 0}</span>
+                              {coupon.usageLimit ? (
+                                <span className="text-muted-foreground">of {coupon.usageLimit}</span>
                               ) : (
-                                <>
-                                  <Percent className="h-4 w-4 text-primary" />
-                                  {coupon.discountValue}%
-                                </>
+                                <span className="text-muted-foreground">No limit</span>
                               )}
-                            </span>
-                            {coupon.discountType === 'percent' && coupon.maxDiscount ? (
-                              <span className="text-xs text-muted-foreground">
-                                Max discount {formatCurrency(coupon.maxDiscount)}
-                              </span>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                        <TableCell>{formatCurrency(coupon.minCartValue)}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-col text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3.5 w-3.5" />
-                              {formatDateRange(coupon.startDate, coupon.expiryDate)}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={statusMeta.variant}>{statusMeta.label}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col text-xs">
-                            <span className="font-medium">{coupon.usageCount ?? 0}</span>
-                            {coupon.usageLimit ? (
-                              <span className="text-muted-foreground">of {coupon.usageLimit}</span>
-                            ) : (
-                              <span className="text-muted-foreground">No limit</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Switch checked={coupon.isActive} onCheckedChange={() => handleToggle(coupon)} />
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => setEditingCoupon(coupon)}
-                              title="Edit coupon"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleDelete(coupon)}
-                              disabled={deleteMutation.isPending}
-                              title="Delete coupon"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Switch checked={coupon.isActive} onCheckedChange={() => handleToggle(coupon)} />
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setEditingCoupon(coupon)}
+                                title="Edit coupon"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleDelete(coupon)}
+                                disabled={deleteMutation.isPending}
+                                title="Delete coupon"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
 
-      <CouponFormDialog
-        mode="edit"
-        coupon={editingCoupon ?? undefined}
-        open={Boolean(editingCoupon)}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen) {
-            setEditingCoupon(null);
-          }
-        }}
-        onSuccess={onFormSuccess}
-      />
-    </div>
+        <CouponFormDialog
+          mode="edit"
+          coupon={editingCoupon ?? undefined}
+          open={Boolean(editingCoupon)}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setEditingCoupon(null);
+            }
+          }}
+          onSuccess={onFormSuccess}
+        />
+      </div>
+    </>
   );
 };
 

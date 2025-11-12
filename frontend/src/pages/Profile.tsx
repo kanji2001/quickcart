@@ -34,6 +34,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Address } from '@/types/api';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 
 const profileSchema = z.object({
   name: z
@@ -122,6 +123,7 @@ const Profile = () => {
   const createAddressMutation = useCreateAddressMutation();
   const updateAddressMutation = useUpdateAddressMutation();
   const deleteAddressMutation = useDeleteAddressMutation();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const setDefaultAddressMutation = useSetDefaultAddressMutation();
 
   const [addressDialogOpen, setAddressDialogOpen] = useState(false);
@@ -341,8 +343,13 @@ const Profile = () => {
     setAddressDialogOpen(true);
   };
 
-  const handleDeleteAddress = (address: Address) => {
-    const confirmed = window.confirm('Are you sure you want to delete this address?');
+  const handleDeleteAddress = async (address: Address) => {
+    const confirmed = await confirm({
+      title: 'Delete this address?',
+      description: 'You will need to add it again if you want to use it for future orders.',
+      confirmText: 'Delete address',
+      variant: 'destructive',
+    });
     if (!confirmed) {
       return;
     }
@@ -402,339 +409,342 @@ const Profile = () => {
   const phoneValue = form.watch('phone');
 
   return (
-    <div className="container mx-auto px-4 py-12 space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Profile</h1>
-          <p className="text-muted-foreground">Manage your personal information, addresses, and account details.</p>
-        </div>
-        {roleBadge}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
-        <Card className="h-fit">
-          <CardHeader>
-            <CardTitle>Profile Photo</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20">
-                {previewUrl ? (
-                  <AvatarImage src={previewUrl} alt={currentUser?.name} />
-                ) : currentUser?.avatar?.url ? (
-                  <AvatarImage src={currentUser.avatar.url} alt={currentUser.name} />
-                ) : (
-                  <AvatarFallback>{avatarInitials}</AvatarFallback>
-                )}
-              </Avatar>
-              <div className="space-y-2 text-sm">
-                <p className="font-medium">{currentUser?.name}</p>
-                <p className="text-muted-foreground">{currentUser?.email}</p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="avatar">Upload New Photo</Label>
-              <Input id="avatar" type="file" accept="image/*" onChange={handleAvatarInput} />
-              <p className="text-xs text-muted-foreground">PNG, JPG up to 5MB.</p>
-            </div>
-          </CardContent>
-          <CardFooter className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={handleRemoveAvatar}
-              disabled={!currentUser?.avatar?.url && !selectedFile && !previewUrl}
-            >
-              Remove Photo
-            </Button>
-          </CardFooter>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Account Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)} noValidate>
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" {...form.register('name')} />
-                {form.formState.errors.name ? (
-                  <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" disabled {...form.register('email')} className="bg-muted/60" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input id="phone" {...form.register('phone')} />
-                {form.formState.errors.phone ? (
-                  <p className="text-sm text-destructive">{form.formState.errors.phone.message}</p>
-                ) : null}
-              </div>
-
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div>
-                  <p className="text-sm font-medium">Receive order updates</p>
-                  <p className="text-xs text-muted-foreground">
-                    Notifications will be sent to your phone number {phoneValue ? `(+91 ${phoneValue})` : ''}.
-                  </p>
-                </div>
-              </div>
-            </form>
-          </CardContent>
-          <CardFooter className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                form.reset({
-                  name: currentUser?.name ?? '',
-                  email: currentUser?.email ?? '',
-                  phone: currentUser?.phone ?? '',
-                });
-                if (objectUrlRef.current) {
-                  URL.revokeObjectURL(objectUrlRef.current);
-                  objectUrlRef.current = null;
-                }
-                setSelectedFile(null);
-                setPreviewUrl(currentUser?.avatar?.url ?? null);
-                setRemoveAvatar(false);
-              }}
-              disabled={updateProfileMutation.isPending}
-            >
-              Reset
-            </Button>
-            <Button
-              type="button"
-              className="gradient-primary"
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={updateProfileMutation.isPending}
-            >
-              {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+    <>
+      {ConfirmDialog}
+      <div className="container mx-auto px-4 py-12 space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <CardTitle>Saved Addresses</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Store your preferred shipping details to speed up checkout.
-            </p>
+            <h1 className="text-3xl font-bold">Profile</h1>
+            <p className="text-muted-foreground">Manage your personal information, addresses, and account details.</p>
           </div>
-          <Dialog open={addressDialogOpen} onOpenChange={(open) => {
-            if (!open) {
-              setEditingAddress(null);
-            }
-            setAddressDialogOpen(open);
-          }}>
-            <DialogTrigger asChild>
-              <Button onClick={() => {
-                setEditingAddress(null);
-                setAddressDialogOpen(true);
-              }}>
-                Add Address
+          {roleBadge}
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle>Profile Photo</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20">
+                  {previewUrl ? (
+                    <AvatarImage src={previewUrl} alt={currentUser?.name} />
+                  ) : currentUser?.avatar?.url ? (
+                    <AvatarImage src={currentUser.avatar.url} alt={currentUser.name} />
+                  ) : (
+                    <AvatarFallback>{avatarInitials}</AvatarFallback>
+                  )}
+                </Avatar>
+                <div className="space-y-2 text-sm">
+                  <p className="font-medium">{currentUser?.name}</p>
+                  <p className="text-muted-foreground">{currentUser?.email}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="avatar">Upload New Photo</Label>
+                <Input id="avatar" type="file" accept="image/*" onChange={handleAvatarInput} />
+                <p className="text-xs text-muted-foreground">PNG, JPG up to 5MB.</p>
+              </div>
+            </CardContent>
+            <CardFooter className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleRemoveAvatar}
+                disabled={!currentUser?.avatar?.url && !selectedFile && !previewUrl}
+              >
+                Remove Photo
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>{editingAddress ? 'Edit Address' : 'Add Address'}</DialogTitle>
-                <DialogDescription>
-                  {editingAddress
-                    ? 'Update your saved address details.'
-                    : 'Fill out the form to save a new shipping address.'}
-                </DialogDescription>
-              </DialogHeader>
-              <form className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="address-fullName">Full Name</Label>
-                    <Input id="address-fullName" {...addressForm.register('fullName')} />
-                    {addressForm.formState.errors.fullName ? (
-                      <p className="text-sm text-destructive">{addressForm.formState.errors.fullName.message}</p>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="address-phone">Phone</Label>
-                    <Input id="address-phone" {...addressForm.register('phone')} />
-                    {addressForm.formState.errors.phone ? (
-                      <p className="text-sm text-destructive">{addressForm.formState.errors.phone.message}</p>
-                    ) : null}
-                  </div>
-                </div>
+            </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Account Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)} noValidate>
                 <div className="space-y-2">
-                  <Label htmlFor="address-line1">Address Line 1</Label>
-                  <Input id="address-line1" {...addressForm.register('addressLine1')} />
-                  {addressForm.formState.errors.addressLine1 ? (
-                    <p className="text-sm text-destructive">{addressForm.formState.errors.addressLine1.message}</p>
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input id="name" {...form.register('name')} />
+                  {form.formState.errors.name ? (
+                    <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
                   ) : null}
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="address-line2">Address Line 2</Label>
-                  <Input id="address-line2" {...addressForm.register('addressLine2')} />
-                  {addressForm.formState.errors.addressLine2 ? (
-                    <p className="text-sm text-destructive">{addressForm.formState.errors.addressLine2.message}</p>
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" disabled {...form.register('email')} className="bg-muted/60" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input id="phone" {...form.register('phone')} />
+                  {form.formState.errors.phone ? (
+                    <p className="text-sm text-destructive">{form.formState.errors.phone.message}</p>
                   ) : null}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="address-city">City</Label>
-                    <Input id="address-city" {...addressForm.register('city')} />
-                    {addressForm.formState.errors.city ? (
-                      <p className="text-sm text-destructive">{addressForm.formState.errors.city.message}</p>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="address-state">State</Label>
-                    <Input id="address-state" {...addressForm.register('state')} />
-                    {addressForm.formState.errors.state ? (
-                      <p className="text-sm text-destructive">{addressForm.formState.errors.state.message}</p>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="address-pincode">Pincode</Label>
-                    <Input id="address-pincode" {...addressForm.register('pincode')} />
-                    {addressForm.formState.errors.pincode ? (
-                      <p className="text-sm text-destructive">{addressForm.formState.errors.pincode.message}</p>
-                    ) : null}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="address-country">Country</Label>
-                    <Input id="address-country" {...addressForm.register('country')} />
-                    {addressForm.formState.errors.country ? (
-                      <p className="text-sm text-destructive">{addressForm.formState.errors.country.message}</p>
-                    ) : null}
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="address-type">Address Type</Label>
-                    <Select
-                      value={addressForm.watch('addressType')}
-                      onValueChange={(value) => addressForm.setValue('addressType', value as AddressFormValues['addressType'])}
-                    >
-                      <SelectTrigger id="address-type">
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="home">Home</SelectItem>
-                        <SelectItem value="office">Office</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Set as default</Label>
-                    <div className="border rounded-lg p-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium">Default shipping address</p>
-                        <p className="text-xs text-muted-foreground">Use this address for future checkouts.</p>
-                      </div>
-                      <Switch
-                        checked={addressForm.watch('isDefault') ?? false}
-                        onCheckedChange={(checked) => addressForm.setValue('isDefault', checked)}
-                      />
-                    </div>
+
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div>
+                    <p className="text-sm font-medium">Receive order updates</p>
+                    <p className="text-xs text-muted-foreground">
+                      Notifications will be sent to your phone number {phoneValue ? `(+91 ${phoneValue})` : ''}.
+                    </p>
                   </div>
                 </div>
               </form>
-              <DialogFooter className="pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    if (!editingAddress) {
-                      addressForm.reset();
-                    }
-                    setAddressDialogOpen(false);
-                    setEditingAddress(null);
-                  }}
-                  disabled={isAddressMutationPending}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  className="gradient-primary"
-                  onClick={handleAddressSubmit}
-                  disabled={isAddressMutationPending}
-                >
-                  {isAddressMutationPending ? 'Saving...' : 'Save Address'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          {addressesQuery.data && addressesQuery.data.length > 0 ? (
-            addressesQuery.data.map((address) => (
-              <div
-                key={address._id}
-                className={cn(
-                  'rounded-lg border p-4 space-y-3 transition-shadow',
-                  address.isDefault ? 'border-primary shadow-sm' : 'border-border',
-                )}
+            </CardContent>
+            <CardFooter className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  form.reset({
+                    name: currentUser?.name ?? '',
+                    email: currentUser?.email ?? '',
+                    phone: currentUser?.phone ?? '',
+                  });
+                  if (objectUrlRef.current) {
+                    URL.revokeObjectURL(objectUrlRef.current);
+                    objectUrlRef.current = null;
+                  }
+                  setSelectedFile(null);
+                  setPreviewUrl(currentUser?.avatar?.url ?? null);
+                  setRemoveAvatar(false);
+                }}
+                disabled={updateProfileMutation.isPending}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-semibold capitalize">{(address.addressType ?? 'home').toLowerCase()} address</p>
-                    <p className="text-sm text-muted-foreground">
-                      Updated{' '}
-                      {(() => {
-                        const updatedAt = address.updatedAt ?? address.createdAt;
-                        return updatedAt ? new Date(updatedAt).toLocaleDateString() : 'recently';
-                      })()}
-                    </p>
-                  </div>
-                  {address.isDefault ? <Badge>Default</Badge> : null}
-                </div>
-                <div className="text-sm space-y-1">
-                  <p className="font-medium">{address.fullName}</p>
-                  <p>{address.addressLine1}</p>
-                  {address.addressLine2 ? <p>{address.addressLine2}</p> : null}
-                  <p>
-                    {address.city}, {address.state} {address.pincode}
-                  </p>
-                  <p>{address.country}</p>
-                  <p className="text-muted-foreground">Phone: +91 {address.phone}</p>
-                </div>
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <Button variant="outline" size="sm" onClick={() => handleEditAddress(address)}>
-                    Edit
-                  </Button>
-                  {!address.isDefault ? (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleSetDefaultAddress(address)}
-                      disabled={setDefaultAddressMutation.isPending}
-                    >
-                      Set Default
-                    </Button>
-                  ) : null}
-                  <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteAddress(address)}>
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="col-span-full rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-              No addresses saved yet. Add one to speed up future orders.
+                Reset
+              </Button>
+              <Button
+                type="button"
+                className="gradient-primary"
+                onClick={form.handleSubmit(onSubmit)}
+                disabled={updateProfileMutation.isPending}
+              >
+                {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle>Saved Addresses</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Store your preferred shipping details to speed up checkout.
+              </p>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            <Dialog open={addressDialogOpen} onOpenChange={(open) => {
+              if (!open) {
+                setEditingAddress(null);
+              }
+              setAddressDialogOpen(open);
+            }}>
+              <DialogTrigger asChild>
+                <Button onClick={() => {
+                  setEditingAddress(null);
+                  setAddressDialogOpen(true);
+                }}>
+                  Add Address
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>{editingAddress ? 'Edit Address' : 'Add Address'}</DialogTitle>
+                  <DialogDescription>
+                    {editingAddress
+                      ? 'Update your saved address details.'
+                      : 'Fill out the form to save a new shipping address.'}
+                  </DialogDescription>
+                </DialogHeader>
+                <form className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="address-fullName">Full Name</Label>
+                      <Input id="address-fullName" {...addressForm.register('fullName')} />
+                      {addressForm.formState.errors.fullName ? (
+                        <p className="text-sm text-destructive">{addressForm.formState.errors.fullName.message}</p>
+                      ) : null}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address-phone">Phone</Label>
+                      <Input id="address-phone" {...addressForm.register('phone')} />
+                      {addressForm.formState.errors.phone ? (
+                        <p className="text-sm text-destructive">{addressForm.formState.errors.phone.message}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address-line1">Address Line 1</Label>
+                    <Input id="address-line1" {...addressForm.register('addressLine1')} />
+                    {addressForm.formState.errors.addressLine1 ? (
+                      <p className="text-sm text-destructive">{addressForm.formState.errors.addressLine1.message}</p>
+                    ) : null}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address-line2">Address Line 2</Label>
+                    <Input id="address-line2" {...addressForm.register('addressLine2')} />
+                    {addressForm.formState.errors.addressLine2 ? (
+                      <p className="text-sm text-destructive">{addressForm.formState.errors.addressLine2.message}</p>
+                    ) : null}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="address-city">City</Label>
+                      <Input id="address-city" {...addressForm.register('city')} />
+                      {addressForm.formState.errors.city ? (
+                        <p className="text-sm text-destructive">{addressForm.formState.errors.city.message}</p>
+                      ) : null}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address-state">State</Label>
+                      <Input id="address-state" {...addressForm.register('state')} />
+                      {addressForm.formState.errors.state ? (
+                        <p className="text-sm text-destructive">{addressForm.formState.errors.state.message}</p>
+                      ) : null}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address-pincode">Pincode</Label>
+                      <Input id="address-pincode" {...addressForm.register('pincode')} />
+                      {addressForm.formState.errors.pincode ? (
+                        <p className="text-sm text-destructive">{addressForm.formState.errors.pincode.message}</p>
+                      ) : null}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address-country">Country</Label>
+                      <Input id="address-country" {...addressForm.register('country')} />
+                      {addressForm.formState.errors.country ? (
+                        <p className="text-sm text-destructive">{addressForm.formState.errors.country.message}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="address-type">Address Type</Label>
+                      <Select
+                        value={addressForm.watch('addressType')}
+                        onValueChange={(value) => addressForm.setValue('addressType', value as AddressFormValues['addressType'])}
+                      >
+                        <SelectTrigger id="address-type">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="home">Home</SelectItem>
+                          <SelectItem value="office">Office</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Set as default</Label>
+                      <div className="border rounded-lg p-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">Default shipping address</p>
+                          <p className="text-xs text-muted-foreground">Use this address for future checkouts.</p>
+                        </div>
+                        <Switch
+                          checked={addressForm.watch('isDefault') ?? false}
+                          onCheckedChange={(checked) => addressForm.setValue('isDefault', checked)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </form>
+                <DialogFooter className="pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (!editingAddress) {
+                        addressForm.reset();
+                      }
+                      setAddressDialogOpen(false);
+                      setEditingAddress(null);
+                    }}
+                    disabled={isAddressMutationPending}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    className="gradient-primary"
+                    onClick={handleAddressSubmit}
+                    disabled={isAddressMutationPending}
+                  >
+                    {isAddressMutationPending ? 'Saving...' : 'Save Address'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            {addressesQuery.data && addressesQuery.data.length > 0 ? (
+              addressesQuery.data.map((address) => (
+                <div
+                  key={address._id}
+                  className={cn(
+                    'rounded-lg border p-4 space-y-3 transition-shadow',
+                    address.isDefault ? 'border-primary shadow-sm' : 'border-border',
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold capitalize">{(address.addressType ?? 'home').toLowerCase()} address</p>
+                      <p className="text-sm text-muted-foreground">
+                        Updated{' '}
+                        {(() => {
+                          const updatedAt = address.updatedAt ?? address.createdAt;
+                          return updatedAt ? new Date(updatedAt).toLocaleDateString() : 'recently';
+                        })()}
+                      </p>
+                    </div>
+                    {address.isDefault ? <Badge>Default</Badge> : null}
+                  </div>
+                  <div className="text-sm space-y-1">
+                    <p className="font-medium">{address.fullName}</p>
+                    <p>{address.addressLine1}</p>
+                    {address.addressLine2 ? <p>{address.addressLine2}</p> : null}
+                    <p>
+                      {address.city}, {address.state} {address.pincode}
+                    </p>
+                    <p>{address.country}</p>
+                    <p className="text-muted-foreground">Phone: +91 {address.phone}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <Button variant="outline" size="sm" onClick={() => handleEditAddress(address)}>
+                      Edit
+                    </Button>
+                    {!address.isDefault ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleSetDefaultAddress(address)}
+                        disabled={setDefaultAddressMutation.isPending}
+                      >
+                        Set Default
+                      </Button>
+                    ) : null}
+                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteAddress(address)}>
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                No addresses saved yet. Add one to speed up future orders.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 };
 

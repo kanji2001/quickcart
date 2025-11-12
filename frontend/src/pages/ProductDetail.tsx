@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronRight, Heart, Minus, Plus, ShoppingCart, Shield, Star, Truck } from 'lucide-react';
@@ -59,6 +59,14 @@ export default function ProductDetail() {
     return cart.items.find((item) => item.product._id === product._id);
   }, [cart, product]);
 
+  useEffect(() => {
+    if (cartItem) {
+      setQuantity(cartItem.quantity);
+    } else {
+      setQuantity(1);
+    }
+  }, [cartItem]);
+
   const discountPercentage = useMemo(() => {
     if (!product?.discountPrice || product.price <= 0) return 0;
     return Math.round(((product.price - product.discountPrice) / product.price) * 100);
@@ -81,20 +89,40 @@ export default function ProductDetail() {
       return;
     }
 
+    const stock = product.stock ?? 0;
+    if (stock <= 0) {
+      toast.error('This item is currently out of stock');
+      return;
+    }
+
+    if (quantity > stock) {
+      toast.error('Not enough stock available', {
+        description: `Only ${stock} item${stock === 1 ? '' : 's'} are available.`,
+      });
+      setQuantity(stock);
+      return;
+    }
+
+    const nextQuantity = Math.max(1, Math.min(quantity, stock));
     const productId = product._id;
+
     if (cartItem) {
-      const nextQuantity = cartItem.quantity + quantity;
+      if (cartItem.quantity === nextQuantity) {
+        openCart();
+        return;
+      }
       updateCartItemMutation.mutate(
         { itemId: cartItem._id, quantity: nextQuantity },
         {
           onSuccess: () => {
             toast.success('Cart updated', {
-              description: `${product.name} quantity increased to ${nextQuantity}.`,
+              description: `${product.name} quantity updated to ${nextQuantity}.`,
               action: {
                 label: 'View Cart',
                 onClick: openCart,
               },
             });
+            setQuantity(nextQuantity);
           },
           onError: (error) => {
             const description = error instanceof Error ? error.message : 'Please try again.';
@@ -106,16 +134,17 @@ export default function ProductDetail() {
     }
 
     addToCartMutation.mutate(
-      { productId, quantity },
+      { productId, quantity: nextQuantity },
       {
         onSuccess: () => {
           toast.success('Added to cart!', {
-            description: `${product.name} (×${quantity}) added to your cart.`,
-              action: {
-                label: 'View Cart',
-                onClick: openCart,
-              },
+            description: `${product.name} (×${nextQuantity}) added to your cart.`,
+            action: {
+              label: 'View Cart',
+              onClick: openCart,
+            },
           });
+          setQuantity(nextQuantity);
         },
         onError: (error) => {
           const description = error instanceof Error ? error.message : 'Please try again.';
@@ -148,15 +177,13 @@ export default function ProductDetail() {
   const features = product.features ?? [];
   const relatedProducts = relatedQuery.data ?? [];
   const stock = product.stock ?? 0;
-  const remainingStock = stock > 0 ? Math.max(0, stock - (cartItem?.quantity ?? 0)) : stock;
   const addMutationPending = addToCartMutation.isPending || updateCartItemMutation.isPending;
-  const canAddMore = stock === 0 ? false : cartItem ? remainingStock > 0 : true;
-  const canIncreaseQuantity =
-    stock > 0
-      ? cartItem
-        ? remainingStock > 0 && quantity < remainingStock
-        : quantity < stock
-      : false;
+  const desiredQuantity = Math.max(1, quantity);
+  const clampedQuantity = stock > 0 ? Math.min(desiredQuantity, stock) : desiredQuantity;
+  const existingQuantity = cartItem?.quantity ?? 0;
+  const canIncreaseQuantity = stock > 0 && quantity < stock;
+  const isSameQuantity = cartItem ? existingQuantity === clampedQuantity : false;
+  const buttonDisabled = stock <= 0 || addMutationPending || clampedQuantity < 1;
 
   return (
     <div className="min-h-screen py-8">
@@ -249,15 +276,10 @@ export default function ProductDetail() {
                   <div className="font-medium text-foreground">
                     Already in your cart: <span className="font-semibold">{cartItem.quantity}</span>
                   </div>
-                  {stock > 0 ? (
-                    remainingStock > 0 ? (
-                      <p>You can add up to {remainingStock} more item{remainingStock === 1 ? '' : 's'}.</p>
-                    ) : (
-                      <p>You&apos;ve reached the maximum available quantity.</p>
-                    )
-                  ) : (
-                    <p>This product is currently unavailable.</p>
-                  )}
+                  <p>
+                    Stock available: {stock} item{stock === 1 ? '' : 's'}. Adjust the quantity below to set your desired
+                    total.
+                  </p>
                 </div>
               ) : null}
               <div className="flex items-center gap-4">
@@ -269,13 +291,7 @@ export default function ProductDetail() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() =>
-                      setQuantity((prev) => {
-                        if (stock <= 0) return prev;
-                        const max = cartItem ? Math.max(1, remainingStock) : stock;
-                        return Math.min(max, prev + 1);
-                      })
-                    }
+                    onClick={() => setQuantity((prev) => Math.min(stock, prev + 1))}
                     disabled={!canIncreaseQuantity}
                   >
                     <Plus className="w-4 h-4" />
@@ -285,17 +301,21 @@ export default function ProductDetail() {
               <div className="flex gap-3 flex-wrap">
                 <Button
                   onClick={handleAddToCart}
-                  disabled={stock === 0 || addMutationPending || (cartItem ? !canAddMore : false)}
+                  disabled={buttonDisabled}
                   className="flex-1 min-w-[12rem] gradient-primary"
                   size="lg"
                 >
                   <ShoppingCart className="w-5 h-5 mr-2" />
-                  {addMutationPending
-                    ? 'Updating...'
-                    : cartItem
-                      ? canAddMore
-                        ? 'Add More'
-                        : 'Max Added'
+                  {cartItem
+                    ? isSameQuantity
+                      ? addMutationPending
+                        ? 'Updating...'
+                        : 'View Cart'
+                      : addMutationPending
+                        ? 'Updating...'
+                        : 'Update Cart'
+                    : addMutationPending
+                      ? 'Adding...'
                       : 'Add to Cart'}
                 </Button>
                 <Button

@@ -18,6 +18,7 @@ import { useCartStore } from '@/stores/cart-store';
 import { useCartQuery } from '@/hooks/cart/use-cart';
 import { useAuthStore, selectAuthUser, selectIsAuthenticated } from '@/stores/auth-store';
 import { useLogoutMutation } from '@/hooks/auth/use-logout';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 
 const DesktopLinks = () => (
   <div className="hidden lg:flex items-center space-x-8">
@@ -152,10 +153,20 @@ export function Navbar() {
   const isAuthenticated = useAuthStore(selectIsAuthenticated);
   const logoutMutation = useLogoutMutation();
   const user = useAuthStore(selectAuthUser);
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const cartItemsCount = cart?.totalItems ?? 0;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const confirmed = await confirm({
+      title: 'Sign out of QuickCart?',
+      description: 'Any in-progress checkout information will be cleared from this device.',
+      confirmText: 'Logout',
+      variant: 'destructive',
+    });
+    if (!confirmed) {
+      return;
+    }
     logoutMutation.mutate();
   };
 
@@ -188,7 +199,9 @@ export function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 glass-effect border-b">
+    <>
+      {ConfirmDialog}
+      <nav className="sticky top-0 z-50 glass-effect border-b">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center space-x-2">
@@ -267,6 +280,7 @@ export function Navbar() {
       </div>
 
       <MobileMenu isOpen={mobileOpen} onClose={() => setMobileOpen(false)} isAuthenticated={isAuthenticated} />
-    </nav>
+      </nav>
+    </>
   );
 }

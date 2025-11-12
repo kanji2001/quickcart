@@ -12,6 +12,8 @@ import { formatCurrency } from '@/utils/number';
 import { toast } from 'sonner';
 import { AddProductDialog } from '@/components/admin/AddProductDialog';
 import { EditProductDialog } from '@/components/admin/EditProductDialog';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
+import type { Product } from '@/types/product';
 
 const ProductsLoading = () => (
   <Card className="shadow-sm">
@@ -83,10 +85,43 @@ export const AdminProducts = () => {
   const { data, isLoading, isError, refetch, isFetching } = useAdminProducts(queryParams);
   const updateMutation = useAdminUpdateProduct();
   const deleteMutation = useAdminDeleteProduct();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
-  const handleToggle = (id: string, field: 'isActive' | 'isFeatured', currentValue: boolean) => {
+  const handleToggle = async (product: Product & { _id: string }, field: 'isActive' | 'isFeatured') => {
+    const currentValue = product[field];
+    const togglingActive = field === 'isActive';
+    const nextStateLabel = currentValue ? 'Disable' : 'Enable';
+    const title = togglingActive
+      ? `${nextStateLabel} "${product.name}"?`
+      : currentValue
+        ? `Remove "${product.name}" from featured products?`
+        : `Mark "${product.name}" as featured?`;
+    const description = togglingActive
+      ? currentValue
+        ? 'Customers will no longer see this product in the storefront.'
+        : 'Customers will be able to view and purchase this product.'
+      : currentValue
+        ? 'This product will no longer appear in featured sections.'
+        : 'This product will be highlighted in featured sections.';
+    const confirmText = togglingActive
+      ? currentValue
+        ? 'Disable product'
+        : 'Enable product'
+      : currentValue
+        ? 'Unmark product'
+        : 'Mark as featured';
+
+    const confirmed = await confirm({
+      title,
+      description,
+      confirmText,
+      variant: currentValue ? 'destructive' : 'default',
+    });
+
+    if (!confirmed) return;
+
     updateMutation.mutate(
-      { id, payload: { [field]: !currentValue } },
+      { id: product._id, payload: { [field]: !currentValue } },
       {
         onSuccess: () => {
           toast.success('Product updated');
@@ -98,10 +133,16 @@ export const AdminProducts = () => {
     );
   };
 
-  const handleDelete = (id: string, name: string) => {
-    const confirmed = window.confirm(`Remove ${name}? This action will permanently delete the product.`);
+  const handleDelete = async (product: Product & { _id: string }) => {
+    const confirmed = await confirm({
+      title: `Remove "${product.name}"?`,
+      description: 'This action will permanently delete the product and its data.',
+      confirmText: 'Delete product',
+      variant: 'destructive',
+    });
     if (!confirmed) return;
-    deleteMutation.mutate(id, {
+
+    deleteMutation.mutate(product._id, {
       onSuccess: () => toast.success('Product removed'),
       onError: () => toast.error('Failed to remove product'),
     });
@@ -140,8 +181,10 @@ export const AdminProducts = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <Card className="shadow-sm overflow-hidden">
+    <>
+      {ConfirmDialog}
+      <div className="space-y-4">
+        <Card className="shadow-sm overflow-hidden">
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between w-full">
           <CardTitle className="text-base">Catalogue</CardTitle>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-1 sm:justify-end w-full">
@@ -182,7 +225,7 @@ export const AdminProducts = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.length === 0 ? (
+                        {items.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-muted-foreground">
                       No products found
@@ -224,7 +267,7 @@ export const AdminProducts = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleToggle(product._id, 'isActive', product.isActive)}
+                          onClick={() => void handleToggle(product, 'isActive')}
                           disabled={updateMutation.isPending}
                         >
                           {product.isActive ? (
@@ -240,7 +283,7 @@ export const AdminProducts = () => {
                         <Button
                           variant={product.isFeatured ? 'secondary' : 'outline'}
                           size="sm"
-                          onClick={() => handleToggle(product._id, 'isFeatured', product.isFeatured)}
+                          onClick={() => void handleToggle(product, 'isFeatured')}
                           disabled={updateMutation.isPending}
                         >
                           <Star className="mr-1 h-4 w-4" />
@@ -249,7 +292,7 @@ export const AdminProducts = () => {
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => handleDelete(product._id, product.name)}
+                          onClick={() => void handleDelete(product)}
                           disabled={deleteMutation.isPending}
                         >
                           <Trash2 className="mr-1 h-4 w-4" /> Remove
@@ -314,7 +357,7 @@ export const AdminProducts = () => {
                       variant="outline"
                       size="sm"
                       className="w-full sm:w-auto"
-                      onClick={() => handleToggle(product._id, 'isActive', product.isActive)}
+                      onClick={() => void handleToggle(product, 'isActive')}
                       disabled={updateMutation.isPending}
                     >
                       {product.isActive ? (
@@ -331,7 +374,7 @@ export const AdminProducts = () => {
                       variant={product.isFeatured ? 'secondary' : 'outline'}
                       size="sm"
                       className="w-full sm:w-auto"
-                      onClick={() => handleToggle(product._id, 'isFeatured', product.isFeatured)}
+                      onClick={() => void handleToggle(product, 'isFeatured')}
                       disabled={updateMutation.isPending}
                     >
                       <Star className="mr-1 h-4 w-4" />
@@ -341,7 +384,7 @@ export const AdminProducts = () => {
                       variant="destructive"
                       size="sm"
                       className="w-full sm:w-auto"
-                      onClick={() => handleDelete(product._id, product.name)}
+                      onClick={() => void handleDelete(product)}
                       disabled={deleteMutation.isPending}
                     >
                       <Trash2 className="mr-1 h-4 w-4" /> Remove
@@ -378,8 +421,9 @@ export const AdminProducts = () => {
             </Button>
           </div>
         </div>
-      </Card>
-    </div>
+        </Card>
+      </div>
+    </>
   );
 };
 
