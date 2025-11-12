@@ -201,7 +201,7 @@ export function Navbar() {
   return (
     <>
       {ConfirmDialog}
-      <nav className="sticky top-0 z-50 glass-effect border-b">
+    <nav className="sticky top-0 z-50 glass-effect border-b">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center space-x-2">
@@ -280,7 +280,7 @@ export function Navbar() {
       </div>
 
       <MobileMenu isOpen={mobileOpen} onClose={() => setMobileOpen(false)} isAuthenticated={isAuthenticated} />
-      </nav>
+    </nav>
     </>
   );
 }
